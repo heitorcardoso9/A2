@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 
@@ -9,6 +10,9 @@ function getChatId(uid1, uid2) {
 
 export default function ChatScreen({ navigation, route }) {
   const { withUserId, withUserEmail, activityTitle } = route.params;
+  const insets = useSafeAreaInsets();
+  const [bottomInset] = useState(insets.bottom);
+  const [topInset] = useState(insets.top);
   const myUid = auth.currentUser.uid;
   const chatId = getChatId(myUid, withUserId);
   const [messages, setMessages] = useState([]);
@@ -51,12 +55,16 @@ export default function ChatScreen({ navigation, route }) {
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <View style={styles.header}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior="padding"
+      keyboardVerticalOffset={Platform.OS === 'ios' ? bottomInset : 0}
+    >
+      <View style={[styles.header, { paddingTop: topInset + 12 }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>‹ Voltar</Text>
         </TouchableOpacity>
-        <View style={{ marginLeft: 10 }}>
+        <View style={styles.headerInfo}>
           <Text style={styles.name}>{withUserEmail?.split('@')[0] || 'Conversa'}</Text>
           {activityTitle ? <Text style={styles.activity}>{activityTitle}</Text> : null}
         </View>
@@ -78,7 +86,7 @@ export default function ChatScreen({ navigation, route }) {
         }}
       />
 
-      <View style={styles.inputBar}>
+      <View style={[styles.inputBar, { paddingBottom: bottomInset }]}>
         <TextInput
           style={styles.input}
           placeholder="Escreva uma mensagem"
@@ -96,8 +104,9 @@ export default function ChatScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#EBF1EC' },
-  header: { flexDirection: 'row', alignItems: 'center', paddingTop: 50, paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
   back: { color: '#0E5C46', fontWeight: '700', fontSize: 14 },
+  headerInfo: { alignItems: 'flex-end' },
   name: { fontWeight: '700', fontSize: 14 },
   activity: { fontSize: 12, color: '#5C6962' },
   bubble: { maxWidth: '75%', padding: 10, borderRadius: 16 },
@@ -105,7 +114,7 @@ const styles = StyleSheet.create({
   bubbleTheirs: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', alignSelf: 'flex-start', borderBottomLeftRadius: 4 },
   bubbleText: { fontSize: 14, color: '#1B231F' },
   bubbleTextMine: { fontSize: 14, color: '#fff' },
-  inputBar: { flexDirection: 'row', gap: 8, padding: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee' },
+  inputBar: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee' },
   input: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 },
   sendBtn: { backgroundColor: '#DD6433', width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
 });

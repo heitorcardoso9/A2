@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
@@ -7,6 +8,9 @@ import { auth, db } from '../services/firebase';
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
+  const [showSenha, setShowSenha] = useState(false);
+  const [showConfirmar, setShowConfirmar] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -14,6 +18,16 @@ export default function LoginScreen({ navigation }) {
     if (!email || !senha) {
       Alert.alert('Ops', 'Preencha e-mail e senha.');
       return;
+    }
+    if (isSignUp) {
+      if (!confirmarSenha) {
+        Alert.alert('Ops', 'Confirme sua senha.');
+        return;
+      }
+      if (senha !== confirmarSenha) {
+        Alert.alert('Ops', 'As senhas não coincidem.');
+        return;
+      }
     }
     setLoading(true);
     try {
@@ -28,12 +42,16 @@ export default function LoginScreen({ navigation }) {
       } else {
         await signInWithEmailAndPassword(auth, email, senha);
       }
-      navigation.replace('Main');
     } catch (error) {
       Alert.alert('Erro', traduzErro(error.code));
     } finally {
       setLoading(false);
     }
+  }
+
+  function toggleModo() {
+    setIsSignUp(!isSignUp);
+    setConfirmarSenha('');
   }
 
   return (
@@ -49,19 +67,42 @@ export default function LoginScreen({ navigation }) {
         value={email}
         onChangeText={setEmail}
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        secureTextEntry
-        value={senha}
-        onChangeText={setSenha}
-      />
+
+      <View style={styles.passwordRow}>
+        <TextInput
+          style={styles.passwordInput}
+          placeholder="Senha"
+          autoCapitalize="none"
+          secureTextEntry={!showSenha}
+          value={senha}
+          onChangeText={setSenha}
+        />
+        <TouchableOpacity onPress={() => setShowSenha(!showSenha)}>
+          <Ionicons name={showSenha ? 'eye-off' : 'eye'} size={20} color="#5C6962" />
+        </TouchableOpacity>
+      </View>
+
+      {isSignUp && (
+        <View style={styles.passwordRow}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Confirme a senha"
+            autoCapitalize="none"
+            secureTextEntry={!showConfirmar}
+            value={confirmarSenha}
+            onChangeText={setConfirmarSenha}
+          />
+          <TouchableOpacity onPress={() => setShowConfirmar(!showConfirmar)}>
+            <Ionicons name={showConfirmar ? 'eye-off' : 'eye'} size={20} color="#5C6962" />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
         <Text style={styles.buttonText}>{loading ? 'Aguarde...' : isSignUp ? 'Criar conta' : 'Entrar'}</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
+      <TouchableOpacity onPress={toggleModo}>
         <Text style={styles.switchText}>
           {isSignUp ? 'Já tem conta? Entrar' : 'Ainda não tem conta? Cadastre-se'}
         </Text>
@@ -87,6 +128,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', textAlign: 'center', color: '#0E5C46' },
   tagline: { fontSize: 14, color: '#5C6962', textAlign: 'center', marginBottom: 28 },
   input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 14 },
+  passwordRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, marginBottom: 12 },
+  passwordInput: { flex: 1, paddingVertical: 12, fontSize: 14 },
   button: { backgroundColor: '#0E5C46', padding: 14, borderRadius: 10, marginTop: 8 },
   buttonText: { color: '#fff', textAlign: 'center', fontWeight: '700' },
   switchText: { textAlign: 'center', marginTop: 16, color: '#0E5C46', fontWeight: '600' },

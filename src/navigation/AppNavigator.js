@@ -25,14 +25,19 @@ function MainTabs() {
   );
 }
 
-export default function AppNavigator() {
+export default function AppNavigator({ isLoggedIn }) {
   return (
-    <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="Login" component={LoginScreen} />
-      <Stack.Screen name="Main" component={MainTabs} />
-      <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
-      <Stack.Screen name="Interested" component={InterestedScreen} />
-      <Stack.Screen name="Chat" component={ChatScreen} />
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {isLoggedIn ? (
+        <>
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
+          <Stack.Screen name="Interested" component={InterestedScreen} />
+          <Stack.Screen name="Chat" component={ChatScreen} />
+        </>
+      ) : (
+        <Stack.Screen name="Login" component={LoginScreen} />
+      )}
     </Stack.Navigator>
   );
 }
