@@ -34,6 +34,7 @@ export default function ChatScreen({ navigation, route }) {
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMessages(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
     });
     return unsubscribe;
   }, []);

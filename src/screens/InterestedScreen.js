@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -25,7 +26,7 @@ export default function InterestedScreen({ navigation, route }) {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <TouchableOpacity onPress={() => navigation.goBack()}>
         <Text style={styles.back}>‹ Voltar</Text>
       </TouchableOpacity>
@@ -74,7 +75,7 @@ export default function InterestedScreen({ navigation, route }) {
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

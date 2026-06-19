@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 
@@ -21,7 +22,7 @@ export default function FeedScreen({ navigation }) {
   const lista = filtro === 'Todos' ? activities : activities.filter((a) => a.type === filtro);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.wordmark}>Companhia</Text>
 
       <View style={styles.filterRow}>
@@ -59,12 +60,12 @@ export default function FeedScreen({ navigation }) {
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 12 },
   wordmark: { fontSize: 18, fontWeight: '800', color: '#0E5C46', paddingHorizontal: 16, marginBottom: 12 },
   filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
   filterChip: { borderWidth: 1, borderColor: '#ddd', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14 },

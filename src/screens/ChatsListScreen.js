@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 
@@ -20,7 +21,7 @@ export default function ChatsListScreen({ navigation }) {
   }, []);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.title}>Conversas</Text>
       <FlatList
         data={chats}
@@ -50,12 +51,12 @@ export default function ChatsListScreen({ navigation }) {
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingTop: 50 },
+  container: { flex: 1, backgroundColor: '#fff', paddingTop: 12 },
   title: { fontSize: 16, fontWeight: '700', paddingHorizontal: 16, marginBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#E3F0EA', alignItems: 'center', justifyContent: 'center' },

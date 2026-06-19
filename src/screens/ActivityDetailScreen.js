@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 
@@ -51,50 +52,54 @@ export default function ActivityDetailScreen({ navigation, route }) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 18, flexGrow: 1 }}>
-      <TouchableOpacity onPress={() => navigation.goBack()}>
-        <Text style={styles.back}>‹ Voltar</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
 
-      <Text style={styles.chip}>{activity.type}</Text>
-      <Text style={styles.title}>{activity.title}</Text>
-      <Text style={styles.meta}>📅 {activity.date}</Text>
-      <Text style={styles.meta}>📍 {activity.local}</Text>
-      <Text style={styles.owner}>
-        {mine ? 'Organizado por você' : `Organizado por ${activity.ownerEmail?.split('@')[0]}`}
-      </Text>
-      <Text style={styles.desc}>{activity.desc}</Text>
+      <ScrollView style={styles.container} contentContainerStyle={{ padding: 18, flexGrow: 1 }}>
+        <TouchableOpacity onPress={() => navigation.goBack()}>
+          <Text style={styles.back}>‹ Voltar</Text>
+        </TouchableOpacity>
 
-      <View style={{ marginTop: 'auto', gap: 10 }}>
-        {mine ? (
-          <TouchableOpacity style={styles.buttonPrimary} onPress={() => navigation.navigate('Interested', { activity })}>
-            <Text style={styles.buttonText}>Ver interessados</Text>
-          </TouchableOpacity>
-        ) : (
-          <>
-            <TouchableOpacity
-              style={[styles.buttonAccent, sent && styles.buttonDisabled]}
-              onPress={handleParticipar}
-              disabled={sent || sending || checking}
-            >
-              <Text style={styles.buttonText}>
-                {checking ? 'Verificando...' : sent ? '✓ Interesse enviado' : sending ? 'Enviando...' : 'Quero participar'}
-              </Text>
+        <Text style={styles.chip}>{activity.type}</Text>
+        <Text style={styles.title}>{activity.title}</Text>
+        <Text style={styles.meta}>📅 {activity.date}</Text>
+        <Text style={styles.meta}>📍 {activity.local}</Text>
+        <Text style={styles.owner}>
+          {mine ? 'Organizado por você' : `Organizado por ${activity.ownerEmail?.split('@')[0]}`}
+        </Text>
+        <Text style={styles.desc}>{activity.desc}</Text>
+
+        <View style={{ marginTop: 'auto', gap: 10 }}>
+          {mine ? (
+            <TouchableOpacity style={styles.buttonPrimary} onPress={() => navigation.navigate('Interested', { activity })}>
+              <Text style={styles.buttonText}>Ver interessados</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.buttonOutline}
-              onPress={() => navigation.navigate('Chat', {
-                withUserId: activity.ownerId,
-                withUserEmail: activity.ownerEmail,
-                activityTitle: activity.title,
-              })}
-            >
-              <Text style={styles.buttonOutlineText}>Conversar com quem organizou</Text>
-            </TouchableOpacity>
-          </>
-        )}
-      </View>
-    </ScrollView>
+          ) : (
+            <>
+              <TouchableOpacity
+                style={[styles.buttonAccent, sent && styles.buttonDisabled]}
+                onPress={handleParticipar}
+                disabled={sent || sending || checking}
+              >
+                <Text style={styles.buttonText}>
+                  {checking ? 'Verificando...' : sent ? '✓ Interesse enviado' : sending ? 'Enviando...' : 'Quero participar'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.buttonOutline}
+                onPress={() => navigation.navigate('Chat', {
+                  withUserId: activity.ownerId,
+                  withUserEmail: activity.ownerEmail,
+                  activityTitle: activity.title,
+                })}
+              >
+                <Text style={styles.buttonOutlineText}>Conversar com quem organizou</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+
   );
 }
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { Ionicons } from '@expo/vector-icons';
 
 import LoginScreen from '../screens/LoginScreen';
 import FeedScreen from '../screens/FeedScreen';
@@ -14,9 +15,25 @@ import ChatScreen from '../screens/ChatScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
+const TAB_ICONS = {
+  Feed: 'home',
+  Chats: 'chatbubble-ellipses',
+  Criar: 'add-circle',
+  Perfil: 'person',
+};
+
 function MainTabs() {
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        headerShown: false,
+        tabBarActiveTintColor: '#0E5C46',
+        tabBarInactiveTintColor: '#8B958F',
+        tabBarIcon: ({ color, size }) => (
+          <Ionicons name={TAB_ICONS[route.name]} size={size} color={color} />
+        ),
+      })}
+    >
       <Tab.Screen name="Feed" component={FeedScreen} />
       <Tab.Screen name="Chats" component={ChatsListScreen} />
       <Tab.Screen name="Criar" component={CreateActivityScreen} />

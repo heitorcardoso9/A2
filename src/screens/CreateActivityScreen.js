@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 
@@ -41,42 +42,44 @@ export default function CreateActivityScreen({ navigation }) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ padding: 18 }}>
-      <Text style={styles.label}>Tipo</Text>
-      <View style={styles.chipRow}>
-        {TIPOS.map((t) => (
-          <TouchableOpacity
-            key={t}
-            style={[styles.chip, tipo === t && styles.chipActive]}
-            onPress={() => setTipo(t)}
-          >
-            <Text style={[styles.chipText, tipo === t && styles.chipTextActive]}>{t}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView contentContainerStyle={{ padding: 18 }}>
+        <Text style={styles.label}>Tipo</Text>
+        <View style={styles.chipRow}>
+          {TIPOS.map((t) => (
+            <TouchableOpacity
+              key={t}
+              style={[styles.chip, tipo === t && styles.chipActive]}
+              onPress={() => setTipo(t)}
+            >
+              <Text style={[styles.chipText, tipo === t && styles.chipTextActive]}>{t}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-      <Text style={styles.label}>Título</Text>
-      <TextInput style={styles.input} value={titulo} onChangeText={setTitulo} placeholder="Ex: Trilha na Pedra Grande" />
+        <Text style={styles.label}>Título</Text>
+        <TextInput style={styles.input} value={titulo} onChangeText={setTitulo} placeholder="Ex: Trilha na Pedra Grande" />
 
-      <Text style={styles.label}>Data e horário</Text>
-      <TextInput style={styles.input} value={data} onChangeText={setData} placeholder="Ex: Sábado, 9h" />
+        <Text style={styles.label}>Data e horário</Text>
+        <TextInput style={styles.input} value={data} onChangeText={setData} placeholder="Ex: Sábado, 9h" />
 
-      <Text style={styles.label}>Local</Text>
-      <TextInput style={styles.input} value={local} onChangeText={setLocal} placeholder="Ex: Atibaia, SP" />
+        <Text style={styles.label}>Local</Text>
+        <TextInput style={styles.input} value={local} onChangeText={setLocal} placeholder="Ex: Atibaia, SP" />
 
-      <Text style={styles.label}>Descrição</Text>
-      <TextInput
-        style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
-        value={desc}
-        onChangeText={setDesc}
-        placeholder="Conte mais sobre essa atividade"
-        multiline
-      />
+        <Text style={styles.label}>Descrição</Text>
+        <TextInput
+          style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
+          value={desc}
+          onChangeText={setDesc}
+          placeholder="Conte mais sobre essa atividade"
+          multiline
+        />
 
-      <TouchableOpacity style={styles.button} onPress={handlePublicar} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Publicando...' : 'Publicar atividade'}</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.button} onPress={handlePublicar} disabled={loading}>
+          <Text style={styles.buttonText}>{loading ? 'Publicando...' : 'Publicar atividade'}</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
