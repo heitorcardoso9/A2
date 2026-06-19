@@ -8,7 +8,7 @@ export default function InterestedScreen({ navigation, route }) {
   const [interessados, setInteressados] = useState([]);
 
   useEffect(() => {
-    const q = query(collection(db, 'interests'), where('activityId', '==', activity.id));
+    const q = query(collection(db, 'participations'), where('activityId', '==', activity.id));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const lista = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
       setInteressados(lista);
@@ -16,9 +16,9 @@ export default function InterestedScreen({ navigation, route }) {
     return unsubscribe;
   }, []);
 
-  async function atualizarStatus(interestId, novoStatus) {
+  async function atualizarStatus(participationId, novoStatus) {
     try {
-      await updateDoc(doc(db, 'interests', interestId), { status: novoStatus });
+      await updateDoc(doc(db, 'participations', participationId), { status: novoStatus });
     } catch (e) {
       // poderia mostrar um alerta de erro aqui
     }

@@ -17,7 +17,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
   async function checkInterest() {
     try {
       const q = query(
-        collection(db, 'interests'),
+        collection(db, 'participations'),
         where('activityId', '==', activity.id),
         where('userId', '==', auth.currentUser.uid)
       );
@@ -33,7 +33,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
   async function handleParticipar() {
     setSending(true);
     try {
-      await addDoc(collection(db, 'interests'), {
+      await addDoc(collection(db, 'participations'), {
         activityId: activity.id,
         activityTitle: activity.title,
         activityOwnerId: activity.ownerId,
