@@ -65,10 +65,10 @@ export default function ChatScreen({ navigation, route }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>‹ Voltar</Text>
         </TouchableOpacity>
-        <View style={styles.headerInfo}>
+        <TouchableOpacity style={styles.headerInfo} onPress={() => navigation.navigate('UserProfile', { userId: withUserId })}>
           <Text style={styles.name}>{withUserEmail?.split('@')[0] || 'Conversa'}</Text>
           {activityTitle ? <Text style={styles.activity}>{activityTitle}</Text> : null}
-        </View>
+        </TouchableOpacity>
       </View>
 
       <FlatList

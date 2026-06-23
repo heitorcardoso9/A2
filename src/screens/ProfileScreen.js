@@ -4,11 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
+import PhotoViewerModal from '../components/PhotoViewerModal';
 
 export default function ProfileScreen({ navigation }) {
   const myUid = auth.currentUser.uid;
   const [profile, setProfile] = useState({ bio: '', interests: [], photos: [], profilePhotoUrl: null });
   const [minhasAtividades, setMinhasAtividades] = useState([]);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   useEffect(() => {
     const unsubUser = onSnapshot(doc(db, 'users', myUid), (snap) => {
@@ -31,8 +34,16 @@ export default function ProfileScreen({ navigation }) {
     ]);
   }
 
+  function abrirFoto(index) {
+    setViewerIndex(index);
+    setViewerVisible(true);
+  }
+
   const iniciais = auth.currentUser.email.slice(0, 2).toUpperCase();
   const outrasFotos = (profile.photos || []).filter((p) => p.url !== profile.profilePhotoUrl);
+  const allPhotoUrls = profile.profilePhotoUrl
+    ? [profile.profilePhotoUrl, ...outrasFotos.map((p) => p.url)]
+    : outrasFotos.map((p) => p.url);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -43,13 +54,15 @@ export default function ProfileScreen({ navigation }) {
         ListHeaderComponent={
           <>
             <View style={styles.head}>
-              {profile.profilePhotoUrl ? (
-                <Image source={{ uri: profile.profilePhotoUrl }} style={styles.avatarImg} />
-              ) : (
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{iniciais}</Text>
-                </View>
-              )}
+              <TouchableOpacity onPress={() => allPhotoUrls.length > 0 && abrirFoto(0)}>
+                {profile.profilePhotoUrl ? (
+                  <Image source={{ uri: profile.profilePhotoUrl }} style={styles.avatarImg} />
+                ) : (
+                  <View style={styles.avatar}>
+                    <Text style={styles.avatarText}>{iniciais}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
               <Text style={styles.email}>{auth.currentUser.email}</Text>
             </View>
 
@@ -60,7 +73,11 @@ export default function ProfileScreen({ navigation }) {
                 keyExtractor={(item) => item.path}
                 contentContainerStyle={{ gap: 8, paddingBottom: 14 }}
                 showsHorizontalScrollIndicator={false}
-                renderItem={({ item }) => <Image source={{ uri: item.url }} style={styles.thumb} />}
+                renderItem={({ item, index }) => (
+                  <TouchableOpacity onPress={() => abrirFoto(index + (profile.profilePhotoUrl ? 1 : 0))}>
+                    <Image source={{ uri: item.url }} style={styles.thumb} />
+                  </TouchableOpacity>
+                )}
               />
             )}
 
@@ -98,6 +115,12 @@ export default function ProfileScreen({ navigation }) {
             <Text style={styles.activityMeta}>{item.date} · {item.local}</Text>
           </TouchableOpacity>
         )}
+      />
+      <PhotoViewerModal
+        visible={viewerVisible}
+        photos={allPhotoUrls}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerVisible(false)}
       />
     </SafeAreaView>
   );

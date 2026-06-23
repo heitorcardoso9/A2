@@ -46,11 +46,13 @@ export default function InterestedScreen({ navigation, route }) {
           const iniciais = nome.slice(0, 2).toUpperCase();
           return (
             <View style={styles.row}>
-              <View style={styles.avatar}><Text style={styles.avatarText}>{iniciais}</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{nome}</Text>
-                <Text style={styles.statusLabel}>{labelStatus(item.status)}</Text>
-              </View>
+              <TouchableOpacity style={styles.rowTouchable} onPress={() => navigation.navigate('UserProfile', { userId: item.userId })}>
+                <View style={styles.avatar}><Text style={styles.avatarText}>{iniciais}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.name}>{nome}</Text>
+                  <Text style={styles.statusLabel}>{labelStatus(item.status)}</Text>
+                </View>
+              </TouchableOpacity>
               {item.status === 'pendente' && (
                 <View style={{ flexDirection: 'row', gap: 6 }}>
                   <TouchableOpacity style={styles.iconBtnOk} onPress={() => atualizarStatus(item.id, 'confirmado')}>
@@ -100,4 +102,5 @@ const styles = StyleSheet.create({
   iconBtnText: { fontWeight: '700', color: '#1F6B43' },
   chatBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   empty: { textAlign: 'center', color: '#8B958F', marginTop: 40 },
+  rowTouchable: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
 });

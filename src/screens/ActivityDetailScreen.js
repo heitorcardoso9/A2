@@ -63,9 +63,15 @@ export default function ActivityDetailScreen({ navigation, route }) {
         <Text style={styles.title}>{activity.title}</Text>
         <Text style={styles.meta}>📅 {activity.date}</Text>
         <Text style={styles.meta}>📍 {activity.local}</Text>
-        <Text style={styles.owner}>
-          {mine ? 'Organizado por você' : `Organizado por ${activity.ownerEmail?.split('@')[0]}`}
-        </Text>
+        {mine ? (
+          <Text style={styles.owner}>Organizado por você</Text>
+        ) : (
+          <TouchableOpacity onPress={() => navigation.navigate('UserProfile', { userId: activity.ownerId })}>
+            <Text style={[styles.owner, { color: '#0E5C46', fontWeight: '700' }]}>
+              Organizado por {activity.ownerEmail?.split('@')[0]} ›
+            </Text>
+          </TouchableOpacity>
+        )}
         <Text style={styles.desc}>{activity.desc}</Text>
 
         <View style={{ marginTop: 'auto', gap: 10 }}>
