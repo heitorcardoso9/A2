@@ -11,7 +11,6 @@ import ProfileScreen from '../screens/ProfileScreen';
 import EditProfileScreen from '../screens/EditProfileScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import ActivityDetailScreen from '../screens/ActivityDetailScreen';
-import InterestedScreen from '../screens/InterestedScreen';
 import ChatScreen from '../screens/ChatScreen';
 
 const Stack = createNativeStackNavigator();
@@ -51,7 +50,6 @@ export default function AppNavigator({ isLoggedIn }) {
         <>
           <Stack.Screen name="Main" component={MainTabs} />
           <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
-          <Stack.Screen name="Interested" component={InterestedScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />

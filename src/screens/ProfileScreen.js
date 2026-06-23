@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import PhotoViewerModal from '../components/PhotoViewerModal';
 
@@ -12,6 +12,7 @@ export default function ProfileScreen({ navigation }) {
   const [minhasAtividades, setMinhasAtividades] = useState([]);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [participacoes, setParticipacoes] = useState([]);
 
   useEffect(() => {
     const unsubUser = onSnapshot(doc(db, 'users', myUid), (snap) => {
@@ -27,6 +28,25 @@ export default function ProfileScreen({ navigation }) {
     };
   }, []);
 
+  useEffect(() => {
+    const q = query(collection(db, 'participations'), where('userId', '==', myUid));
+    const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const itens = await Promise.all(
+        snapshot.docs.map(async (d) => {
+          const participacao = d.data();
+          const activitySnap = await getDoc(doc(db, 'activities', participacao.activityId));
+          return {
+            id: d.id,
+            status: participacao.status,
+            activity: activitySnap.exists() ? { id: activitySnap.id, ...activitySnap.data() } : null,
+          };
+        })
+      );
+      setParticipacoes(itens.filter((p) => p.activity));
+    });
+    return unsubscribe;
+  }, []);
+
   function handleSair() {
     Alert.alert('Sair', 'Tem certeza que quer sair da sua conta?', [
       { text: 'Cancelar', style: 'cancel' },
@@ -38,6 +58,13 @@ export default function ProfileScreen({ navigation }) {
     setViewerIndex(index);
     setViewerVisible(true);
   }
+
+  function labelStatus(status) {
+    const mapa = { pendente: 'Aguardando resposta', confirmado: 'Confirmado', recusado: 'Recusado' };
+    return mapa[status] || status;
+  }
+
+  const STATUS_STYLE_KEY = { pendente: 'statusPendente', confirmado: 'statusConfirmado', recusado: 'statusRecusado' };
 
   const iniciais = auth.currentUser.email.slice(0, 2).toUpperCase();
   const outrasFotos = (profile.photos || []).filter((p) => p.url !== profile.profilePhotoUrl);
@@ -101,7 +128,24 @@ export default function ProfileScreen({ navigation }) {
             <TouchableOpacity style={styles.buttonGhost} onPress={handleSair}>
               <Text style={styles.buttonGhostText}>Sair</Text>
             </TouchableOpacity>
-
+            <Text style={styles.sectionLabel}>Vou participar</Text>
+            {participacoes.length === 0 ? (
+              <Text style={[styles.empty, { marginBottom: 18 }]}>Você ainda não demonstrou interesse em nenhuma atividade.</Text>
+            ) : (
+              participacoes.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  style={styles.activityRow}
+                  onPress={() => navigation.navigate('ActivityDetail', { activity: p.activity, mine: p.activity.ownerId === myUid })}
+                >
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={styles.activityTitle}>{p.activity.title}</Text>
+                    <Text style={[styles.statusBadge, styles[STATUS_STYLE_KEY[p.status]]]}>{labelStatus(p.status)}</Text>
+                  </View>
+                  <Text style={styles.activityMeta}>{p.activity.date} · {p.activity.local}</Text>
+                </TouchableOpacity>
+              ))
+            )}
             <Text style={styles.sectionLabel}>Minhas atividades</Text>
           </>
         }
@@ -147,4 +191,8 @@ const styles = StyleSheet.create({
   activityTitle: { fontWeight: '700', fontSize: 14 },
   activityMeta: { fontSize: 12, color: '#5C6962', marginTop: 2 },
   empty: { textAlign: 'center', color: '#8B958F', fontSize: 13 },
+  statusBadge: { fontSize: 11, fontWeight: '700', paddingVertical: 3, paddingHorizontal: 9, borderRadius: 999 },
+  statusPendente: { backgroundColor: '#FCEEDB', color: '#8A5A12' },
+  statusConfirmado: { backgroundColor: '#E1F0E6', color: '#1F6B43' },
+  statusRecusado: { backgroundColor: '#EFEDE7', color: '#6B6B63' },
 });
