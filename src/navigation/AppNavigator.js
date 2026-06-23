@@ -8,6 +8,7 @@ import FeedScreen from '../screens/FeedScreen';
 import ChatsListScreen from '../screens/ChatsListScreen';
 import CreateActivityScreen from '../screens/CreateActivityScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
 import ActivityDetailScreen from '../screens/ActivityDetailScreen';
 import InterestedScreen from '../screens/InterestedScreen';
 import ChatScreen from '../screens/ChatScreen';
@@ -51,6 +52,7 @@ export default function AppNavigator({ isLoggedIn }) {
           <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
           <Stack.Screen name="Interested" component={InterestedScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />
