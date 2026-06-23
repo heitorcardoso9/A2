@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import UserAvatar from '../components/UserAvatar';
 import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -47,7 +48,7 @@ export default function InterestedScreen({ navigation, route }) {
           return (
             <View style={styles.row}>
               <TouchableOpacity style={styles.rowTouchable} onPress={() => navigation.navigate('UserProfile', { userId: item.userId })}>
-                <View style={styles.avatar}><Text style={styles.avatarText}>{iniciais}</Text></View>
+                <UserAvatar userId={item.userId} fallbackEmail={item.userEmail} size={38} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{nome}</Text>
                   <Text style={styles.statusLabel}>{labelStatus(item.status)}</Text>
@@ -88,7 +89,7 @@ function labelStatus(status) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', padding: 18 },
-  back: { color: '#0E5C46', fontWeight: '700', marginBottom: 12, fontSize: 14 },
+  back: { color: '#0E5C46', fontWeight: '700', marginBottom: 12, fontSize: 16 },
   miniCard: { backgroundColor: '#EBF1EC', borderRadius: 14, padding: 12, marginBottom: 18 },
   miniTitle: { fontWeight: '700', fontSize: 14 },
   miniMeta: { fontSize: 12, color: '#5C6962', marginTop: 2 },

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import UserAvatar from '../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
@@ -66,8 +67,11 @@ export default function ChatScreen({ navigation, route }) {
           <Text style={styles.back}>‹ Voltar</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerInfo} onPress={() => navigation.navigate('UserProfile', { userId: withUserId })}>
-          <Text style={styles.name}>{withUserEmail?.split('@')[0] || 'Conversa'}</Text>
-          {activityTitle ? <Text style={styles.activity}>{activityTitle}</Text> : null}
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={styles.name}>{withUserEmail?.split('@')[0] || 'Conversa'}</Text>
+            {activityTitle ? <Text style={styles.activity}>{activityTitle}</Text> : null}
+          </View>
+          <UserAvatar userId={withUserId} fallbackEmail={withUserEmail} size={32} />
         </TouchableOpacity>
       </View>
 
@@ -106,8 +110,8 @@ export default function ChatScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#EBF1EC' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  back: { color: '#0E5C46', fontWeight: '700', fontSize: 14 },
-  headerInfo: { alignItems: 'flex-end' },
+  back: { color: '#0E5C46', fontWeight: '700', fontSize: 16 },
+  headerInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { fontWeight: '700', fontSize: 14 },
   activity: { fontSize: 12, color: '#5C6962' },
   bubble: { maxWidth: '75%', padding: 10, borderRadius: 16 },

@@ -188,8 +188,8 @@ export default function EditProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  back: { color: '#0E5C46', fontWeight: '700', fontSize: 14 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12,paddingTop: 20, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  back: { color: '#0E5C46', fontWeight: '700', fontSize: 16 },
   headerTitle: { fontWeight: '700', fontSize: 16 },
   label: { fontSize: 13, fontWeight: '700', color: '#5C6962', marginTop: 14, marginBottom: 6 },
   hint: { fontSize: 12, color: '#8B958F', marginBottom: 10 },
