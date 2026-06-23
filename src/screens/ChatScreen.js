@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import UserName from '../components/UserName';
 import UserAvatar from '../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
@@ -68,7 +69,7 @@ export default function ChatScreen({ navigation, route }) {
         </TouchableOpacity>
         <TouchableOpacity style={styles.headerInfo} onPress={() => navigation.navigate('UserProfile', { userId: withUserId })}>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.name}>{withUserEmail?.split('@')[0] || 'Conversa'}</Text>
+            <Text style={styles.name}><UserName userId={withUserId} fallbackEmail={withUserEmail} /></Text>
             {activityTitle ? <Text style={styles.activity}>{activityTitle}</Text> : null}
           </View>
           <UserAvatar userId={withUserId} fallbackEmail={withUserEmail} size={32} />

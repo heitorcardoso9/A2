@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import UserName from '../components/UserName';
 import UserAvatar from '../components/UserAvatar';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
@@ -45,7 +46,7 @@ export default function ChatsListScreen({ navigation }) {
             >
               <UserAvatar userId={otherUid} fallbackEmail={otherEmail} size={38} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.name}>{nome}</Text>
+                <Text style={styles.name}><UserName userId={otherUid} fallbackEmail={otherEmail} /></Text>
                 <Text style={styles.last} numberOfLines={1}>{item.lastMessage || 'Sem mensagens ainda'}</Text>
               </View>
             </TouchableOpacity>

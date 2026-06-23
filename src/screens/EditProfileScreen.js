@@ -18,6 +18,7 @@ export default function EditProfileScreen({ navigation }) {
   const [profileId, setProfileId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [username, setUsername] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -26,6 +27,7 @@ export default function EditProfileScreen({ navigation }) {
         const data = snap.data();
         setBio(data.bio || '');
         setInterests(data.interests || []);
+        setUsername(data.username || '');
         const existentes = (data.photos || []).map((p, i) => ({
           id: `existing-${i}`,
           uri: p.url,
@@ -89,6 +91,11 @@ export default function EditProfileScreen({ navigation }) {
   }
 
   async function handleSalvar() {
+    const usernameLimpo = username.trim();
+    if (usernameLimpo && !/^[\p{L}0-9_ ]{3,20}$/u.test(usernameLimpo)) {
+      Alert.alert('Nome de usuário inválido', 'Use de 3 a 20 letras, números, espaço ou "_".');
+      return;
+    }
     setSaving(true);
     try {
       const finais = [];
@@ -108,6 +115,7 @@ export default function EditProfileScreen({ navigation }) {
       }
       const fotoEscolhida = finais.find((f) => f._id === profileId);
       await updateDoc(doc(db, 'users', myUid), {
+        username: usernameLimpo,
         bio: bio.trim(),
         interests,
         photos: finais.map(({ url, path }) => ({ url, path })),
@@ -155,7 +163,14 @@ export default function EditProfileScreen({ navigation }) {
             </TouchableOpacity>
           )}
         </View>
-
+        <Text style={styles.label}>Nome de usuário</Text>
+        <TextInput
+          style={styles.input}
+          value={username}
+          onChangeText={setUsername}
+          placeholder="ex: heitor_mc"
+          autoCapitalize="none"
+        />
         <Text style={styles.label}>Bio</Text>
         <TextInput
           style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
@@ -188,7 +203,7 @@ export default function EditProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12,paddingTop: 20, borderBottomWidth: 1, borderBottomColor: '#eee' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: '#eee' },
   back: { color: '#0E5C46', fontWeight: '700', fontSize: 16 },
   headerTitle: { fontWeight: '700', fontSize: 16 },
   label: { fontSize: 13, fontWeight: '700', color: '#5C6962', marginTop: 14, marginBottom: 6 },

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserAvatar from '../components/UserAvatar';
+import UserName from '../components/UserName';
 
 export default function ActivityDetailScreen({ navigation, route }) {
   const { activity, mine } = route.params;
@@ -92,7 +93,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
           <TouchableOpacity style={styles.ownerRow} onPress={() => navigation.navigate('UserProfile', { userId: activity.ownerId })}>
             <UserAvatar userId={activity.ownerId} fallbackEmail={activity.ownerEmail} size={28} />
             <Text style={[styles.owner, { color: '#0E5C46', fontWeight: '700', marginTop: 0, marginLeft: 8 }]}>
-              Organizado por {activity.ownerEmail?.split('@')[0]} ›
+              Organizado por <UserName userId={activity.ownerId} fallbackEmail={activity.ownerEmail} /> ›
             </Text>
           </TouchableOpacity>
         )}
@@ -104,39 +105,38 @@ export default function ActivityDetailScreen({ navigation, route }) {
             {interessados.length === 0 ? (
               <Text style={styles.empty}>Ninguém demonstrou interesse ainda.</Text>
             ) : (
-              interessados.map((item) => {
-                const nome = item.userEmail?.split('@')[0] || 'Usuário';
-                return (
-                  <View key={item.id} style={styles.row}>
-                    <TouchableOpacity
-                      style={styles.rowTouchable}
-                      onPress={() => navigation.navigate('UserProfile', { userId: item.userId })}
-                    >
-                      <UserAvatar userId={item.userId} fallbackEmail={item.userEmail} size={38} />
-                      <View style={{ flex: 1, marginLeft: 10 }}>
-                        <Text style={styles.name}>{nome}</Text>
-                        <Text style={styles.statusLabel}>{labelStatus(item.status)}</Text>
-                      </View>
-                    </TouchableOpacity>
-                    {item.status === 'pendente' && (
-                      <View style={{ flexDirection: 'row', gap: 6 }}>
-                        <TouchableOpacity style={styles.iconBtnOk} onPress={() => atualizarStatus(item.id, 'confirmado')}>
-                          <Text style={styles.iconBtnText}>✓</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.iconBtnX} onPress={() => atualizarStatus(item.id, 'recusado')}>
-                          <Text style={styles.iconBtnText}>✕</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      style={styles.chatBtn}
-                      onPress={() => navigation.navigate('Chat', { withUserId: item.userId, withUserEmail: item.userEmail, activityTitle: activity.title })}
-                    >
-                      <Text style={{ fontSize: 16 }}>💬</Text>
-                    </TouchableOpacity>
-                  </View>
-                );
-              })
+              interessados.map((item) => (
+                <View key={item.id} style={styles.row}>
+                  <TouchableOpacity
+                    style={styles.rowTouchable}
+                    onPress={() => navigation.navigate('UserProfile', { userId: item.userId })}
+                  >
+                    <UserAvatar userId={item.userId} fallbackEmail={item.userEmail} size={38} />
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={styles.name}>
+                        <UserName userId={item.userId} fallbackEmail={item.userEmail} />
+                      </Text>
+                      <Text style={styles.statusLabel}>{labelStatus(item.status)}</Text>
+                    </View>
+                  </TouchableOpacity>
+                  {item.status === 'pendente' && (
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      <TouchableOpacity style={styles.iconBtnOk} onPress={() => atualizarStatus(item.id, 'confirmado')}>
+                        <Text style={styles.iconBtnText}>✓</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.iconBtnX} onPress={() => atualizarStatus(item.id, 'recusado')}>
+                        <Text style={styles.iconBtnText}>✕</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  <TouchableOpacity
+                    style={styles.chatBtn}
+                    onPress={() => navigation.navigate('Chat', { withUserId: item.userId, withUserEmail: item.userEmail, activityTitle: activity.title })}
+                  >
+                    <Text style={{ fontSize: 16 }}>💬</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
             )}
           </View>
         ) : (

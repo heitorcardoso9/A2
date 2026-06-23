@@ -68,7 +68,7 @@ export default function UserProfileScreen({ navigation, route }) {
               </View>
             )}
           </TouchableOpacity>
-          <Text style={styles.email}>{(profile.email || '').split('@')[0]}</Text>
+          <Text style={styles.username}>{profile.username || (profile.email || '').split('@')[0]}</Text>
         </View>
 
         {outrasFotos.length > 0 && (
@@ -123,10 +123,11 @@ export default function UserProfileScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
   header: { paddingHorizontal: 16, paddingBottom: 8 },
-  back: { color: '#0E5C46', fontWeight: '700', fontSize: 14 },
+  back: { color: '#0E5C46', fontWeight: '700', fontSize: 16 },
   head: { alignItems: 'center', marginBottom: 14 },
+  username: { fontWeight: '700', fontSize: 15, marginBottom: 2 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E3F0EA', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  avatarImg: { width: 64, height: 64, borderRadius: 32, marginBottom: 8 },
+  avatarImg: { width: 100, height: 100, borderRadius: 50, marginBottom: 8 },
   avatarText: { fontWeight: '700', fontSize: 18, color: '#0A4334' },
   email: { fontSize: 13, color: '#5C6962' },
   thumb: { width: 56, height: 56, borderRadius: 8 },

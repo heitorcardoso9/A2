@@ -90,6 +90,7 @@ export default function ProfileScreen({ navigation }) {
                   </View>
                 )}
               </TouchableOpacity>
+              <Text style={styles.username}>{profile.username || auth.currentUser.email.split('@')[0]}</Text>
               <Text style={styles.email}>{auth.currentUser.email}</Text>
             </View>
 
@@ -172,11 +173,12 @@ export default function ProfileScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
-  head: { alignItems: 'center', marginBottom: 14 },
+  head: { alignItems: 'center', marginVertical: 14 },
   avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E3F0EA', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  avatarImg: { width: 64, height: 64, borderRadius: 32, marginBottom: 8 },
+  avatarImg: { width: 100, height: 100, borderRadius: 50, marginBottom: 8 },
   avatarText: { fontWeight: '700', fontSize: 18, color: '#0A4334' },
-  email: { fontSize: 13, color: '#5C6962' },
+  username: { fontWeight: '700', fontSize: 16, marginTop: 2 },
+  email: { fontSize: 12, color: '#8B958F', marginTop: 1 },
   thumb: { width: 56, height: 56, borderRadius: 8 },
   bio: { fontSize: 13, color: '#5C6962', textAlign: 'center', marginBottom: 14, lineHeight: 19 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 20 },

@@ -3,6 +3,7 @@ import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
+import UserName from '../components/UserName';
 
 const FILTROS = ['Todos', 'Trilha', 'Cinema', 'Corrida', 'Viagem'];
 
@@ -55,7 +56,11 @@ export default function FeedScreen({ navigation }) {
               </View>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardMeta}>{item.date} · {item.local}</Text>
-              {!mine && <Text style={styles.cardOwner}>com {item.ownerEmail?.split('@')[0]}</Text>}
+              {!mine && (
+                <Text style={styles.cardOwner}>
+                  com <UserName userId={item.ownerId} fallbackEmail={item.ownerEmail} />
+                </Text>
+              )}
             </TouchableOpacity>
           );
         }}
