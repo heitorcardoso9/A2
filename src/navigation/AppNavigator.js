@@ -53,6 +53,7 @@ export default function AppNavigator({ isLoggedIn }) {
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+          <Stack.Screen name="EditActivity" component={CreateActivityScreen} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />

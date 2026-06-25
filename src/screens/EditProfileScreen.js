@@ -7,7 +7,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '../services/firebase';
 
-const TIPOS = ['Trilha', 'Cinema', 'Corrida', 'Viagem'];
+const TIPOS = ['Todos', 'Restaurante', 'Esporte', 'Cinema', 'Viagem', 'Outros'];
 const MAX_FOTOS = 6;
 
 export default function EditProfileScreen({ navigation }) {
@@ -170,7 +170,10 @@ export default function EditProfileScreen({ navigation }) {
           onChangeText={setUsername}
           placeholder="ex: heitor_mc"
           autoCapitalize="none"
+          maxLength={20}
         />
+        <Text style={styles.counter}>{username.length}/20</Text>
+
         <Text style={styles.label}>Bio</Text>
         <TextInput
           style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
@@ -178,7 +181,9 @@ export default function EditProfileScreen({ navigation }) {
           onChangeText={setBio}
           placeholder="Conte um pouco sobre você"
           multiline
+          maxLength={500}
         />
+        <Text style={styles.counter}>{bio.length}/500</Text>
 
         <Text style={styles.label}>Interesses</Text>
         <View style={styles.chipsRow}>
@@ -222,4 +227,5 @@ const styles = StyleSheet.create({
   chipTextActive: { color: '#fff' },
   button: { backgroundColor: '#0E5C46', padding: 14, borderRadius: 10, marginTop: 26 },
   buttonText: { color: '#fff', textAlign: 'center', fontWeight: '700' },
+  counter: { fontSize: 11, color: '#8B958F', textAlign: 'right', marginTop: 4 },
 });

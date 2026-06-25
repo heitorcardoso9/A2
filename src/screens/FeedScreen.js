@@ -5,7 +5,7 @@ import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserName from '../components/UserName';
 
-const FILTROS = ['Todos', 'Trilha', 'Cinema', 'Corrida', 'Viagem'];
+const FILTROS = ['Todos', 'Restaurante', 'Esporte', 'Cinema', 'Viagem', 'Outros'];
 
 export default function FeedScreen({ navigation }) {
   const [activities, setActivities] = useState([]);
