@@ -115,7 +115,7 @@ export default function ProfileScreen({ navigation }) {
             data={outrasFotos}
             horizontal
             keyExtractor={(item) => item.path}
-            contentContainerStyle={{ gap: 8, paddingBottom: 14 }}
+            contentContainerStyle={{ gap: 8, paddingBottom: 14, flexGrow: 1, justifyContent: 'center' }}
             showsHorizontalScrollIndicator={false}
             renderItem={({ item, index }) => (
               <TouchableOpacity onPress={() => abrirFoto(index + (profile.profilePhotoUrl ? 1 : 0))}>
@@ -161,8 +161,8 @@ export default function ProfileScreen({ navigation }) {
                 onPress={() => navigation.navigate('ActivityDetail', { activity: p.activity, mine: p.activity.ownerId === myUid })}
               >
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Text style={styles.activityTitle}>{p.activity.title}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={styles.activityTitle} numberOfLines={1} ellipsizeMode="tail">{p.activity.title}</Text>
                     <Text style={[styles.statusBadge, styles[STATUS_STYLE_KEY[p.status]]]}>{labelStatus(p.status)}</Text>
                   </View>
                   <Text style={styles.activityMeta}>{p.activity.date} · {p.activity.local}</Text>
@@ -228,10 +228,10 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 13, fontWeight: '700', color: '#5C6962', textTransform: 'uppercase' },
   activityRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 12, marginBottom: 10 },
   activityIconBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  activityTitle: { fontWeight: '700', fontSize: 14 },
+  activityTitle: { fontWeight: '700', fontSize: 14, flex: 1 },
   activityMeta: { fontSize: 12, color: '#5C6962', marginTop: 2 },
   empty: { textAlign: 'center', color: '#8B958F', fontSize: 13 },
-  statusBadge: { fontSize: 11, fontWeight: '700', paddingVertical: 3, paddingHorizontal: 9, borderRadius: 999 },
+  statusBadge: { fontSize: 11, fontWeight: '700', paddingVertical: 3, paddingHorizontal: 9, borderRadius: 999, flexShrink: 0 },
   statusPendente: { backgroundColor: '#FCEEDB', color: '#8A5A12' },
   statusConfirmado: { backgroundColor: '#E1F0E6', color: '#1F6B43' },
   statusRecusado: { backgroundColor: '#EFEDE7', color: '#6B6B63' },
