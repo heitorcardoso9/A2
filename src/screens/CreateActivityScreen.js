@@ -6,7 +6,7 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/fi
 import { db, auth } from '../services/firebase';
 import SearchablePickerModal from '../components/SearchablePickerModal';
 
-const TIPOS = ['Restaurante', 'Esporte', 'Cinema', 'Viagem', 'Outros'];
+const TIPOS = ['Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
 
 function horarioPadrao() {
   const novo = new Date();

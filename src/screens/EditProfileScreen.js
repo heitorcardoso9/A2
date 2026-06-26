@@ -7,7 +7,7 @@ import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '../services/firebase';
 
-const TIPOS = ['Todos', 'Restaurante', 'Esporte', 'Cinema', 'Viagem', 'Outros'];
+const TIPOS = ['Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
 const MAX_FOTOS = 6;
 
 export default function EditProfileScreen({ navigation }) {

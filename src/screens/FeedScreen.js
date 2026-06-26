@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserName from '../components/UserName';
 
-const FILTROS = ['Todos', 'Restaurante', 'Esporte', 'Cinema', 'Viagem', 'Outros'];
+const FILTROS = ['Todos', 'Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
 
 export default function FeedScreen({ navigation }) {
   const [activities, setActivities] = useState([]);
@@ -26,22 +26,30 @@ export default function FeedScreen({ navigation }) {
     <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.wordmark}>Companhia</Text>
 
-      <View style={styles.filterRow}>
-        {FILTROS.map((f) => (
-          <TouchableOpacity
-            key={f}
-            style={[styles.filterChip, filtro === f && styles.filterChipActive]}
-            onPress={() => setFiltro(f)}
-          >
-            <Text style={[styles.filterText, filtro === f && styles.filterTextActive]}>{f}</Text>
-          </TouchableOpacity>
-        ))}
+      {/* Ajustado: Adicionado contentContainerStyle com alignItems e removido do style principal */}
+      <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScrollContent}
+        >
+          {FILTROS.map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[styles.filterChip, filtro === f && styles.filterChipActive]}
+              onPress={() => setFiltro(f)}
+            >
+              <Text style={[styles.filterText, filtro === f && styles.filterTextActive]}>{f}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       <FlatList
+        style={{ flex: 1 }}
         data={lista}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16, gap: 12 }}
+        contentContainerStyle={{ padding: 16, gap: 12, flexGrow: 1 }}
         ListEmptyComponent={<Text style={styles.empty}>Nenhuma atividade por aqui ainda.</Text>}
         renderItem={({ item }) => {
           const mine = item.ownerId === auth.currentUser?.uid;
@@ -72,7 +80,11 @@ export default function FeedScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingTop: 12 },
   wordmark: { fontSize: 18, fontWeight: '800', color: '#0E5C46', paddingHorizontal: 16, marginBottom: 12 },
-  filterRow: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, marginBottom: 8 },
+
+  // Modificado: view externa para travar a altura da linha de filtros no topo
+  filterContainer: { height: 44, marginBottom: 8 },
+  filterScrollContent: { gap: 8, paddingHorizontal: 16, alignItems: 'center' },
+
   filterChip: { borderWidth: 1, borderColor: '#ddd', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14 },
   filterChipActive: { backgroundColor: '#0E5C46', borderColor: '#0E5C46' },
   filterText: { color: '#5C6962', fontWeight: '600', fontSize: 13 },
