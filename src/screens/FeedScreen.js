@@ -1,12 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList, ScrollView, TextInput, TouchableOpacity, StyleSheet, Modal, Pressable, Platform } from 'react-native';
+import { View, Text, FlatList, ScrollView, TextInput, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserName from '../components/UserName';
 import SearchablePickerModal from '../components/SearchablePickerModal';
+
+LocaleConfig.locales['pt-br'] = {
+  monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
+  monthNamesShort: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+  dayNames: ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'],
+  dayNamesShort: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
+  today: 'Hoje',
+};
+LocaleConfig.defaultLocale = 'pt-br';
 
 const FILTROS = ['Todos', 'Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
 
@@ -28,6 +37,19 @@ function formatarDataCurta(d) {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
 }
 
+function toDateString(d) {
+  if (!d) return null;
+  const ano = d.getFullYear();
+  const mes = String(d.getMonth() + 1).padStart(2, '0');
+  const dia = String(d.getDate()).padStart(2, '0');
+  return `${ano}-${mes}-${dia}`;
+}
+
+function fromDateString(s) {
+  const [ano, mes, dia] = s.split('-').map(Number);
+  return new Date(ano, mes - 1, dia);
+}
+
 export default function FeedScreen({ navigation }) {
   const [activities, setActivities] = useState([]);
   const [filtro, setFiltro] = useState('Todos');
@@ -36,8 +58,6 @@ export default function FeedScreen({ navigation }) {
   const [showFiltrosModal, setShowFiltrosModal] = useState(false);
   const [dataInicio, setDataInicio] = useState(null);
   const [dataFim, setDataFim] = useState(null);
-  const [showInicioPicker, setShowInicioPicker] = useState(false);
-  const [showFimPicker, setShowFimPicker] = useState(false);
 
   const [estados, setEstados] = useState([]);
   const [cidades, setCidades] = useState([]);
@@ -60,7 +80,7 @@ export default function FeedScreen({ navigation }) {
     fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
       .then((r) => r.json())
       .then(setEstados)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -81,17 +101,38 @@ export default function FeedScreen({ navigation }) {
     setCidadeFiltro('');
   }
 
-  function onChangeInicio(event, selected) {
-    setShowInicioPicker(Platform.OS === 'ios');
-    if (event.type === 'dismissed' || !selected) return;
-    setDataInicio(selected);
+  function handleDiaPress(day) {
+    const data = fromDateString(day.dateString);
+    if (!dataInicio || (dataInicio && dataFim)) {
+      setDataInicio(data);
+      setDataFim(null);
+    } else if (data < dataInicio) {
+      setDataInicio(data);
+      setDataFim(null);
+    } else {
+      setDataFim(data);
+    }
   }
 
-  function onChangeFim(event, selected) {
-    setShowFimPicker(Platform.OS === 'ios');
-    if (event.type === 'dismissed' || !selected) return;
-    setDataFim(selected);
-  }
+  const markedDates = useMemo(() => {
+    const marks = {};
+    if (dataInicio && !dataFim) {
+      marks[toDateString(dataInicio)] = { startingDay: true, endingDay: true, color: '#0E5C46', textColor: '#fff' };
+    } else if (dataInicio && dataFim) {
+      const atual = new Date(dataInicio);
+      while (atual <= dataFim) {
+        const key = toDateString(atual);
+        marks[key] = {
+          color: '#0E5C46',
+          textColor: '#fff',
+          startingDay: key === toDateString(dataInicio),
+          endingDay: key === toDateString(dataFim),
+        };
+        atual.setDate(atual.getDate() + 1);
+      }
+    }
+    return marks;
+  }, [dataInicio, dataFim]);
 
   function limparFiltros() {
     setDataInicio(null);
@@ -106,7 +147,7 @@ export default function FeedScreen({ navigation }) {
 
     const filtradas = activities.filter((a) => {
       const dt = getDate(a);
-      if (dt && dt < agora) return false; // esconde atividades que já passaram
+      if (dt && dt < agora) return false;
       if (filtro !== 'Todos' && a.type !== filtro) return false;
       if (dataInicio && dt && dt < dataInicio) return false;
       if (dataFim && dt) {
@@ -208,73 +249,59 @@ export default function FeedScreen({ navigation }) {
 
       <Modal visible={showFiltrosModal} transparent animationType="slide" onRequestClose={() => setShowFiltrosModal(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setShowFiltrosModal(false)}>
-          <Pressable style={styles.modalCard} onPress={() => {}}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Filtros</Text>
-              <TouchableOpacity onPress={() => setShowFiltrosModal(false)}>
-                <Ionicons name="close" size={20} color="#5C6962" />
-              </TouchableOpacity>
-            </View>
+          <Pressable style={styles.modalCard} onPress={() => { }}>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Filtros</Text>
+                <TouchableOpacity onPress={() => setShowFiltrosModal(false)}>
+                  <Ionicons name="close" size={20} color="#5C6962" />
+                </TouchableOpacity>
+              </View>
 
-            <Text style={styles.modalLabel}>Período</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <TouchableOpacity style={[styles.modalInput, { flex: 1 }]} onPress={() => setShowInicioPicker(true)}>
-                <Text style={styles.modalInputText}>{dataInicio ? formatarDataCurta(dataInicio) : 'De'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalInput, { flex: 1 }]} onPress={() => setShowFimPicker(true)}>
-                <Text style={styles.modalInputText}>{dataFim ? formatarDataCurta(dataFim) : 'Até'}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {showInicioPicker && (
-              <DateTimePicker
-                value={dataInicio || new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-                onChange={onChangeInicio}
-              />
-            )}
-            {Platform.OS === 'ios' && showInicioPicker && (
-              <TouchableOpacity style={styles.doneBtn} onPress={() => setShowInicioPicker(false)}>
-                <Text style={styles.doneBtnText}>Concluído</Text>
-              </TouchableOpacity>
-            )}
-            {showFimPicker && (
-              <DateTimePicker
-                value={dataFim || new Date()}
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'calendar'}
-                onChange={onChangeFim}
-              />
-            )}
-            {Platform.OS === 'ios' && showFimPicker && (
-              <TouchableOpacity style={styles.doneBtn} onPress={() => setShowFimPicker(false)}>
-                <Text style={styles.doneBtnText}>Concluído</Text>
-              </TouchableOpacity>
-            )}
-
-            <Text style={styles.modalLabel}>Local</Text>
-            <TouchableOpacity style={styles.modalInput} onPress={() => setShowEstadoModal(true)}>
-              <Text style={styles.modalInputText}>{nomeEstadoFiltro || 'Qualquer estado'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.modalInput, { marginTop: 8 }, !ufFiltro && styles.inputDisabled]}
-              onPress={() => ufFiltro && setShowCidadeModal(true)}
-              disabled={!ufFiltro}
-            >
-              <Text style={styles.modalInputText}>
-                {cidadeFiltro || (!ufFiltro ? 'Selecione o estado primeiro' : carregandoCidades ? 'Carregando...' : 'Qualquer cidade')}
+              <Text style={styles.modalLabel}>Período</Text>
+              <Text style={styles.periodoResumo}>
+                {dataInicio && dataFim
+                  ? `${formatarDataCurta(dataInicio)} até ${formatarDataCurta(dataFim)}`
+                  : dataInicio
+                    ? `${formatarDataCurta(dataInicio)} até... (toque na data final)`
+                    : 'Toque numa data para começar'}
               </Text>
-            </TouchableOpacity>
+              <Calendar
+                markingType="period"
+                markedDates={markedDates}
+                onDayPress={handleDiaPress}
+                minDate={toDateString(new Date())}
+                theme={{
+                  todayTextColor: '#0E5C46',
+                  arrowColor: '#0E5C46',
+                  textDayFontSize: 13,
+                  textMonthFontSize: 14,
+                }}
+              />
 
-            <View style={{ flexDirection: 'row', gap: 8, marginTop: 20 }}>
-              <TouchableOpacity style={styles.modalBtnGhost} onPress={limparFiltros}>
-                <Text style={styles.modalBtnGhostText}>Limpar</Text>
+              <Text style={styles.modalLabel}>Local</Text>
+              <TouchableOpacity style={styles.modalInput} onPress={() => setShowEstadoModal(true)}>
+                <Text style={styles.modalInputText}>{nomeEstadoFiltro || 'Qualquer estado'}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.modalBtnPrimary} onPress={() => setShowFiltrosModal(false)}>
-                <Text style={styles.modalBtnPrimaryText}>Aplicar</Text>
+              <TouchableOpacity
+                style={[styles.modalInput, { marginTop: 8 }, !ufFiltro && styles.inputDisabled]}
+                onPress={() => ufFiltro && setShowCidadeModal(true)}
+                disabled={!ufFiltro}
+              >
+                <Text style={styles.modalInputText}>
+                  {cidadeFiltro || (!ufFiltro ? 'Selecione o estado primeiro' : carregandoCidades ? 'Carregando...' : 'Qualquer cidade')}
+                </Text>
               </TouchableOpacity>
-            </View>
+
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 20, marginBottom: 4 }}>
+                <TouchableOpacity style={styles.modalBtnGhost} onPress={limparFiltros}>
+                  <Text style={styles.modalBtnGhostText}>Limpar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalBtnPrimary} onPress={() => setShowFiltrosModal(false)}>
+                  <Text style={styles.modalBtnPrimaryText}>Aplicar</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
           </Pressable>
         </Pressable>
       </Modal>
@@ -322,15 +349,14 @@ const styles = StyleSheet.create({
   cardOwner: { fontSize: 12, color: '#8B958F', marginTop: 4 },
   empty: { textAlign: 'center', color: '#8B958F', marginTop: 40 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 32 },
+  modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 20, paddingBottom: 32, maxHeight: '85%' },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   modalTitle: { fontWeight: '700', fontSize: 16 },
   modalLabel: { fontSize: 13, fontWeight: '700', color: '#5C6962', marginTop: 14, marginBottom: 6 },
+  periodoResumo: { fontSize: 13, color: '#1B231F', marginBottom: 8 },
   modalInput: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, justifyContent: 'center' },
   modalInputText: { fontSize: 14, color: '#1B231F' },
   inputDisabled: { opacity: 0.5 },
-  doneBtn: { alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 4 },
-  doneBtnText: { color: '#0E5C46', fontWeight: '700', fontSize: 14 },
   modalBtnGhost: { flex: 1, padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#ddd' },
   modalBtnGhostText: { textAlign: 'center', fontWeight: '700', color: '#5C6962' },
   modalBtnPrimary: { flex: 1, padding: 12, borderRadius: 10, backgroundColor: '#0E5C46' },
