@@ -5,8 +5,8 @@ import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, doc, 
 import { db, auth } from '../services/firebase';
 import UserAvatar from '../components/UserAvatar';
 import UserName from '../components/UserName';
-import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 export default function ActivityDetailScreen({ navigation, route }) {
@@ -52,6 +52,8 @@ export default function ActivityDetailScreen({ navigation, route }) {
       await addDoc(collection(db, 'participations'), {
         activityId: activity.id,
         activityTitle: activity.title,
+        activityDate: activity.date,
+        activityLocal: activity.local,
         activityOwnerId: activity.ownerId,
         userId: auth.currentUser.uid,
         userEmail: auth.currentUser.email,
@@ -81,7 +83,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl, flexGrow: 1 }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginBottom: spacing.xxl + 2 }}>
           <Text style={styles.back}>‹ Voltar</Text>
         </TouchableOpacity>
@@ -102,7 +104,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
         )}
         <Text style={styles.desc}>{activity.desc}</Text>
 
-        {mine ? (
+        {mine && (
           <View>
             <Text style={styles.sectionLabel}>Interessados</Text>
             {interessados.length === 0 ? (
@@ -115,8 +117,8 @@ export default function ActivityDetailScreen({ navigation, route }) {
                     onPress={() => navigation.navigate('UserProfile', { userId: item.userId })}
                   >
                     <UserAvatar userId={item.userId} fallbackEmail={item.userEmail} size={38} />
-                    <View style={{ flex: 1, marginLeft: spacing.sm + 2 }}>
-                      <Text style={styles.name}>
+                    <View style={styles.rowTextWrap}>
+                      <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
                         <UserName userId={item.userId} fallbackEmail={item.userEmail} />
                       </Text>
                       <Text style={styles.statusLabel}>{labelStatus(item.status)}</Text>
@@ -125,10 +127,10 @@ export default function ActivityDetailScreen({ navigation, route }) {
                   {item.status === 'pendente' && (
                     <View style={{ flexDirection: 'row', gap: 6 }}>
                       <TouchableOpacity style={styles.iconBtnOk} onPress={() => atualizarStatus(item.id, 'confirmado')}>
-                        <Text style={styles.iconBtnText}>✓</Text>
+                        <Ionicons name="checkmark" size={16} color={colors.success} />
                       </TouchableOpacity>
                       <TouchableOpacity style={styles.iconBtnX} onPress={() => atualizarStatus(item.id, 'recusado')}>
-                        <Text style={styles.iconBtnText}>✕</Text>
+                        <Ionicons name="close" size={16} color={colors.textSecondary} />
                       </TouchableOpacity>
                     </View>
                   )}
@@ -136,32 +138,35 @@ export default function ActivityDetailScreen({ navigation, route }) {
                     style={styles.chatBtn}
                     onPress={() => navigation.navigate('Chat', { withUserId: item.userId, withUserEmail: item.userEmail, activityTitle: activity.title })}
                   >
-                    <Text style={{ fontSize: 16 }}>💬</Text>
+                    <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
                   </TouchableOpacity>
                 </View>
               ))
             )}
           </View>
-        ) : (
-          <View style={{ marginTop: 'auto', gap: spacing.sm + 2 }}>
-            <Button
-              label={checking ? 'Verificando...' : sent ? '✓ Interesse enviado' : sending ? 'Enviando...' : 'Quero participar'}
-              variant="accent"
-              onPress={handleParticipar}
-              disabled={sent || sending || checking}
-            />
-            <Button
-              label="Conversar com quem organizou"
-              variant="outline"
-              onPress={() => navigation.navigate('Chat', {
-                withUserId: activity.ownerId,
-                withUserEmail: activity.ownerEmail,
-                activityTitle: activity.title,
-              })}
-            />
-          </View>
         )}
       </ScrollView>
+
+      {!mine && (
+        <View style={styles.fixedFooter}>
+          <Button
+            label={checking ? 'Verificando...' : sent ? '✓ Interesse enviado' : sending ? 'Enviando...' : 'Quero participar'}
+            variant="accent"
+            onPress={handleParticipar}
+            disabled={sent || sending || checking}
+            style={{ marginBottom: spacing.sm + 2 }}
+          />
+          <Button
+            label="Conversar com quem organizou"
+            variant="outline"
+            onPress={() => navigation.navigate('Chat', {
+              withUserId: activity.ownerId,
+              withUserEmail: activity.ownerEmail,
+              activityTitle: activity.title,
+            })}
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -179,11 +184,12 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary, marginTop: spacing.xl, marginBottom: spacing.md, textTransform: 'uppercase' },
   empty: { textAlign: 'center', color: colors.textFaint, fontSize: fontSize.md, marginBottom: spacing.md },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md + 2 },
-  rowTouchable: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  rowTouchable: { flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0 },
+  rowTextWrap: { flex: 1, minWidth: 0, marginLeft: spacing.sm + 2 },
   name: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
   statusLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
   iconBtnOk: { width: 30, height: 30, borderRadius: radius.sm, backgroundColor: colors.successBg, alignItems: 'center', justifyContent: 'center' },
   iconBtnX: { width: 30, height: 30, borderRadius: radius.sm, backgroundColor: colors.disabled, alignItems: 'center', justifyContent: 'center' },
-  iconBtnText: { fontWeight: fontWeight.bold, color: colors.success },
   chatBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
+  fixedFooter: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.background },
 });

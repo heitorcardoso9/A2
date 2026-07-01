@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Image, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Image, FlatList, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
@@ -52,9 +52,9 @@ export default function UserProfileScreen({ navigation, route }) {
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScreenHeader onBack={() => navigation.goBack()} />
-      <View style={{ padding: spacing.xl }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl, flexGrow: 1 }}>
         <View style={styles.head}>
           <TouchableOpacity onPress={() => allPhotoUrls.length > 0 && abrirFoto(0)}>
             {profile.profilePhotoUrl ? (
@@ -103,7 +103,7 @@ export default function UserProfileScreen({ navigation, route }) {
             onPress={() => navigation.navigate('Chat', { withUserId: userId, withUserEmail: profile.email })}
           />
         )}
-      </View>
+      </ScrollView>
 
       <PhotoViewerModal
         visible={viewerVisible}
@@ -119,9 +119,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   head: { alignItems: 'center', marginBottom: spacing.md + 2 },
   username: { fontWeight: fontWeight.bold, fontSize: fontSize.lg, marginBottom: 2 },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
   avatarImg: { width: 100, height: 100, borderRadius: 50, marginBottom: spacing.sm },
-  avatarText: { fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: colors.primaryDark },
+  avatarText: { fontWeight: fontWeight.bold, fontSize: fontSize.heading, color: colors.primaryDark },
   thumb: { width: 56, height: 56, borderRadius: radius.sm },
   bio: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md + 2, lineHeight: 19 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: spacing.xl },

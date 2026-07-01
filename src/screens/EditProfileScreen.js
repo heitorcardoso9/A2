@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +18,7 @@ export default function EditProfileScreen({ navigation }) {
   const [bio, setBio] = useState('');
   const [interests, setInterests] = useState([]);
   const [photos, setPhotos] = useState([]); // {id, uri, url?, path?, isNew}
+  const [photosOriginais, setPhotosOriginais] = useState([]); // snapshot do que existia ao abrir a tela
   const [profileId, setProfileId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -39,6 +40,7 @@ export default function EditProfileScreen({ navigation }) {
           isNew: false,
         }));
         setPhotos(existentes);
+        setPhotosOriginais(existentes);
         const fotoPerfil = existentes.find((p) => p.url === data.profilePhotoUrl);
         setProfileId(fotoPerfil ? fotoPerfil.id : existentes[0]?.id || null);
       }
@@ -68,6 +70,11 @@ export default function EditProfileScreen({ navigation }) {
       quality: 0.6,
     });
     if (resultado.canceled) return;
+
+    if (resultado.assets.length > vagas) {
+      Alert.alert('Algumas fotos não foram adicionadas', `Você só tinha espaço para mais ${vagas} foto(s), então adicionamos só as primeiras.`);
+    }
+
     const novas = resultado.assets.slice(0, vagas).map((asset, i) => ({
       id: `new-${Date.now()}-${i}`,
       uri: asset.uri,
@@ -78,14 +85,9 @@ export default function EditProfileScreen({ navigation }) {
     if (!profileId && atualizadas.length > 0) setProfileId(atualizadas[0].id);
   }
 
-  async function removerFoto(item) {
-    if (!item.isNew) {
-      try {
-        await deleteObject(ref(storage, item.path));
-      } catch (e) {
-        // se já não existir no Storage, ignora
-      }
-    }
+  function removerFoto(item) {
+    // Não apaga nada do Storage aqui. Só tira da lista local.
+    // A exclusão de verdade só acontece em handleSalvar, comparando com photosOriginais.
     const restantes = photos.filter((p) => p.id !== item.id);
     setPhotos(restantes);
     if (profileId === item.id) {
@@ -124,6 +126,19 @@ export default function EditProfileScreen({ navigation }) {
         photos: finais.map(({ url, path }) => ({ url, path })),
         profilePhotoUrl: fotoEscolhida ? fotoEscolhida.url : null,
       });
+
+      // Só agora, depois de salvar com sucesso, apaga do Storage as fotos
+      // que existiam originalmente e não estão mais na lista final.
+      const pathsFinais = new Set(finais.map((f) => f.path));
+      const removidas = photosOriginais.filter((orig) => !pathsFinais.has(orig.path));
+      await Promise.all(
+        removidas.map((item) =>
+          deleteObject(ref(storage, item.path)).catch(() => {
+            // se já não existir no Storage, ignora
+          })
+        )
+      );
+
       navigation.goBack();
     } catch (e) {
       Alert.alert('Erro', 'Não foi possível salvar agora. Tente de novo.');
@@ -137,72 +152,74 @@ export default function EditProfileScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScreenHeader title="Editar perfil" onBack={() => navigation.goBack()} />
-      <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
-        <Text style={styles.label}>Fotos ({photos.length}/{MAX_FOTOS})</Text>
-        <Text style={styles.hint}>Toque numa foto pra marcar como foto de perfil.</Text>
-        <View style={styles.photoGrid}>
-          {photos.map((item) => (
-            <TouchableOpacity key={item.id} style={styles.photoWrap} onPress={() => setProfileId(item.id)}>
-              <Image source={{ uri: item.uri }} style={styles.photoImg} />
-              {profileId === item.id && (
-                <View style={styles.profileBadge}>
-                  <Ionicons name="star" size={12} color={colors.white} />
-                </View>
-              )}
-              <TouchableOpacity style={styles.removeBtn} onPress={() => removerFoto(item)}>
-                <Ionicons name="close" size={12} color={colors.white} />
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
+          <Text style={styles.label}>Fotos ({photos.length}/{MAX_FOTOS})</Text>
+          <Text style={styles.hint}>Toque numa foto pra marcar como foto de perfil.</Text>
+          <View style={styles.photoGrid}>
+            {photos.map((item) => (
+              <TouchableOpacity key={item.id} style={styles.photoWrap} onPress={() => setProfileId(item.id)}>
+                <Image source={{ uri: item.uri }} style={styles.photoImg} />
+                {profileId === item.id && (
+                  <View style={styles.profileBadge}>
+                    <Ionicons name="star" size={12} color={colors.white} />
+                  </View>
+                )}
+                <TouchableOpacity style={styles.removeBtn} onPress={() => removerFoto(item)}>
+                  <Ionicons name="close" size={12} color={colors.white} />
+                </TouchableOpacity>
               </TouchableOpacity>
-            </TouchableOpacity>
-          ))}
-          {photos.length < MAX_FOTOS && (
-            <TouchableOpacity style={styles.addPhotoBtn} onPress={adicionarFotos}>
-              <Ionicons name="add" size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
-          )}
-        </View>
+            ))}
+            {photos.length < MAX_FOTOS && (
+              <TouchableOpacity style={styles.addPhotoBtn} onPress={adicionarFotos}>
+                <Ionicons name="add" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
 
-        <Text style={styles.label}>Nome de usuário</Text>
-        <TextInput
-          style={styles.input}
-          value={username}
-          onChangeText={setUsername}
-          placeholder="ex: heitor_mc"
-          autoCapitalize="none"
-          maxLength={20}
-        />
-        <Text style={styles.counter}>{username.length}/20</Text>
+          <Text style={styles.label}>Nome de usuário</Text>
+          <TextInput
+            style={styles.input}
+            value={username}
+            onChangeText={setUsername}
+            placeholder="ex: heitor_mc"
+            autoCapitalize="none"
+            maxLength={20}
+          />
+          <Text style={styles.counter}>{username.length}/20</Text>
 
-        <Text style={styles.label}>Bio</Text>
-        <TextInput
-          style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-          value={bio}
-          onChangeText={setBio}
-          placeholder="Conte um pouco sobre você"
-          multiline
-          maxLength={500}
-        />
-        <Text style={styles.counter}>{bio.length}/500</Text>
+          <Text style={styles.label}>Bio</Text>
+          <TextInput
+            style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
+            value={bio}
+            onChangeText={setBio}
+            placeholder="Conte um pouco sobre você"
+            multiline
+            maxLength={500}
+          />
+          <Text style={styles.counter}>{bio.length}/500</Text>
 
-        <Text style={styles.label}>Interesses</Text>
-        <View style={styles.chipsRow}>
-          {TIPOS.map((t) => (
-            <TouchableOpacity
-              key={t}
-              style={[styles.chip, interests.includes(t) && styles.chipActive]}
-              onPress={() => toggleInteresse(t)}
-            >
-              <Text style={[styles.chipText, interests.includes(t) && styles.chipTextActive]}>{t}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+          <Text style={styles.label}>Interesses</Text>
+          <View style={styles.chipsRow}>
+            {TIPOS.map((t) => (
+              <TouchableOpacity
+                key={t}
+                style={[styles.chip, interests.includes(t) && styles.chipActive]}
+                onPress={() => toggleInteresse(t)}
+              >
+                <Text style={[styles.chipText, interests.includes(t) && styles.chipTextActive]}>{t}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <Button
-          label={saving ? 'Salvando...' : 'Salvar alterações'}
-          onPress={handleSalvar}
-          disabled={saving}
-          style={{ marginTop: spacing.xl + 6 }}
-        />
-      </ScrollView>
+          <Button
+            label={saving ? 'Salvando...' : 'Salvar alterações'}
+            onPress={handleSalvar}
+            disabled={saving}
+            style={{ marginTop: spacing.xl + 6 }}
+          />
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -212,7 +229,7 @@ const styles = StyleSheet.create({
   label: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary, marginTop: spacing.md + 2, marginBottom: spacing.sm - 2 },
   hint: { fontSize: fontSize.sm, color: colors.textFaint, marginBottom: spacing.sm + 2 },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm + 2, marginBottom: spacing.sm },
-  photoWrap: { width: 84, height: 84, borderRadius: radius.lg - 2 },
+  photoWrap: { width: 84, height: 84, borderRadius: radius.lg - 2, overflow: 'visible' },
   photoImg: { width: 84, height: 84, borderRadius: radius.lg - 2 },
   profileBadge: { position: 'absolute', bottom: 4, left: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
   removeBtn: { position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.text, alignItems: 'center', justifyContent: 'center' },

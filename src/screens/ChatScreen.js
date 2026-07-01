@@ -23,17 +23,6 @@ export default function ChatScreen({ navigation, route }) {
   const listRef = useRef(null);
 
   useEffect(() => {
-    setDoc(
-      doc(db, 'chats', chatId),
-      {
-        participants: [myUid, withUserId],
-        participantEmails: { [myUid]: auth.currentUser.email, [withUserId]: withUserEmail },
-        activityTitle: activityTitle || null,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMessages(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -52,7 +41,17 @@ export default function ChatScreen({ navigation, route }) {
         senderId: myUid,
         createdAt: serverTimestamp(),
       });
-      await setDoc(doc(db, 'chats', chatId), { updatedAt: serverTimestamp(), lastMessage: conteudo }, { merge: true });
+      await setDoc(
+        doc(db, 'chats', chatId),
+        {
+          participants: [myUid, withUserId],
+          participantEmails: { [myUid]: auth.currentUser.email, [withUserId]: withUserEmail },
+          activityTitle: activityTitle || null,
+          updatedAt: serverTimestamp(),
+          lastMessage: conteudo,
+        },
+        { merge: true }
+      );
     } catch (e) {
       // poderia mostrar um alerta de erro aqui
     }
@@ -83,6 +82,7 @@ export default function ChatScreen({ navigation, route }) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md - 2 }}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
+        ListEmptyComponent={<Text style={styles.emptyChat}>Nenhuma mensagem ainda. Diga oi! 👋</Text>}
         renderItem={({ item }) => {
           const mine = item.senderId === myUid;
           return (
@@ -100,6 +100,7 @@ export default function ChatScreen({ navigation, route }) {
           value={text}
           onChangeText={setText}
           onSubmitEditing={handleSend}
+          blurOnSubmit={false}
         />
         <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
           <Text style={{ color: colors.white, fontWeight: fontWeight.bold }}>➤</Text>
@@ -121,6 +122,7 @@ const styles = StyleSheet.create({
   bubbleTheirs: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderLight, alignSelf: 'flex-start', borderBottomLeftRadius: 4 },
   bubbleText: { fontSize: fontSize.base, color: colors.text },
   bubbleTextMine: { fontSize: fontSize.base, color: colors.white },
+  emptyChat: { textAlign: 'center', color: colors.textFaint, marginTop: 40, fontSize: fontSize.md },
   inputBar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.md, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.borderLight },
   input: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSize.base },
   sendBtn: { backgroundColor: colors.accent, width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },

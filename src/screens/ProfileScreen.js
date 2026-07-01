@@ -185,10 +185,10 @@ export default function ProfileScreen({ navigation }) {
                   <Text style={styles.activityMeta}>{item.date} · {item.local}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.activityIconBtn} onPress={() => navigation.navigate('EditActivity', { activity: item })}>
-                  <Text style={{ fontSize: 14 }}>✏️</Text>
+                  <Ionicons name="pencil-outline" size={16} color={colors.textSecondary} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.activityIconBtn} onPress={() => confirmarExclusao(item)}>
-                  <Text style={{ fontSize: 14 }}>🗑️</Text>
+                  <Ionicons name="trash-outline" size={16} color={colors.accent} />
                 </TouchableOpacity>
               </View>
             ))

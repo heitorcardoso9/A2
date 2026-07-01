@@ -7,6 +7,25 @@ import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestor
 import { db, auth } from '../services/firebase';
 import { colors, spacing, fontSize, fontWeight } from '../constants/theme';
 
+function formatarHorarioChat(timestamp) {
+  if (!timestamp) return '';
+  const data = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const agora = new Date();
+  const mesmoDia = data.toDateString() === agora.toDateString();
+
+  if (mesmoDia) {
+    return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  const ontem = new Date(agora);
+  ontem.setDate(ontem.getDate() - 1);
+  if (data.toDateString() === ontem.toDateString()) {
+    return 'Ontem';
+  }
+
+  return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
 export default function ChatsListScreen({ navigation }) {
   const [chats, setChats] = useState([]);
   const myUid = auth.currentUser.uid;
@@ -45,7 +64,10 @@ export default function ChatsListScreen({ navigation }) {
             >
               <UserAvatar userId={otherUid} fallbackEmail={otherEmail} size={38} />
               <View style={{ flex: 1 }}>
-                <Text style={styles.name}><UserName userId={otherUid} fallbackEmail={otherEmail} /></Text>
+                <View style={styles.nameRow}>
+                  <Text style={styles.name}><UserName userId={otherUid} fallbackEmail={otherEmail} /></Text>
+                  <Text style={styles.time}>{formatarHorarioChat(item.updatedAt)}</Text>
+                </View>
                 <Text style={styles.last} numberOfLines={1}>{item.lastMessage || 'Sem mensagens ainda'}</Text>
               </View>
             </TouchableOpacity>
@@ -60,7 +82,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background, paddingTop: spacing.md },
   title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
+  nameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   name: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
+  time: { fontSize: fontSize.xs, color: colors.textFaint },
   last: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
   empty: { textAlign: 'center', color: colors.textFaint, marginTop: 40 },
 });

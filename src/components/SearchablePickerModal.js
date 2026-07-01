@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Pressable } from 'react-native';
+import { Modal, View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Pressable, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, radius, fontSize, fontWeight, spacing } from '../constants/theme';
 
@@ -24,7 +24,7 @@ export default function SearchablePickerModal({ visible, title, options, onSelec
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <Pressable style={styles.backdrop} onPress={handleClose}>
-        <Pressable style={styles.card} onPress={() => {}}>
+        <Pressable style={styles.card} onPress={() => { }}>
           <View style={styles.header}>
             <Text style={styles.title}>{title}</Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeBtn}>
@@ -48,6 +48,7 @@ export default function SearchablePickerModal({ visible, title, options, onSelec
               <TouchableOpacity
                 style={styles.option}
                 onPress={() => {
+                  Keyboard.dismiss();
                   onSelect(item.value);
                   handleClose();
                 }}

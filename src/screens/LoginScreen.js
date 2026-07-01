@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -34,16 +34,17 @@ export default function LoginScreen({ navigation }) {
     }
     setLoading(true);
     try {
+      const emailLimpo = email.trim();
       if (isSignUp) {
-        const cred = await createUserWithEmailAndPassword(auth, email, senha);
+        const cred = await createUserWithEmailAndPassword(auth, emailLimpo, senha);
         await setDoc(doc(db, 'users', cred.user.uid), {
-          email,
+          email: emailLimpo,
           bio: '',
           interests: [],
           createdAt: serverTimestamp(),
         });
       } else {
-        await signInWithEmailAndPassword(auth, email, senha);
+        await signInWithEmailAndPassword(auth, emailLimpo, senha);
       }
     } catch (error) {
       Alert.alert('Erro', traduzErro(error.code));
@@ -85,68 +86,76 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Companhia</Text>
-      <Text style={styles.tagline}>Atividades em boa companhia</Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>Companhia</Text>
+        <Text style={styles.tagline}>Atividades em boa companhia</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="E-mail"
-        autoCapitalize="none"
-        keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
-      />
-
-      <View style={styles.passwordRow}>
         <TextInput
-          style={styles.passwordInput}
-          placeholder="Senha"
+          style={styles.input}
+          placeholder="E-mail"
           autoCapitalize="none"
-          secureTextEntry={!showSenha}
-          value={senha}
-          onChangeText={setSenha}
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
         />
-        <TouchableOpacity onPress={() => setShowSenha(!showSenha)}>
-          <Ionicons name={showSenha ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
 
-      {!isSignUp && (
-        <TouchableOpacity onPress={handleEsqueciSenha} disabled={resetLoading} style={styles.forgotWrap}>
-          <Text style={styles.forgotText}>{resetLoading ? 'Enviando...' : 'Esqueci minha senha'}</Text>
-        </TouchableOpacity>
-      )}
-
-      {isSignUp && (
         <View style={styles.passwordRow}>
           <TextInput
             style={styles.passwordInput}
-            placeholder="Confirme a senha"
+            placeholder="Senha"
             autoCapitalize="none"
-            secureTextEntry={!showConfirmar}
-            value={confirmarSenha}
-            onChangeText={setConfirmarSenha}
+            secureTextEntry={!showSenha}
+            value={senha}
+            onChangeText={setSenha}
           />
-          <TouchableOpacity onPress={() => setShowConfirmar(!showConfirmar)}>
-            <Ionicons name={showConfirmar ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} />
+          <TouchableOpacity onPress={() => setShowSenha(!showSenha)}>
+            <Ionicons name={showSenha ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
-      )}
 
-      <Button
-        label={loading ? 'Aguarde...' : isSignUp ? 'Criar conta' : 'Entrar'}
-        onPress={handleSubmit}
-        disabled={loading}
-        style={{ marginTop: spacing.sm }}
-      />
+        {!isSignUp && (
+          <TouchableOpacity onPress={handleEsqueciSenha} disabled={resetLoading} style={styles.forgotWrap}>
+            <Text style={styles.forgotText}>{resetLoading ? 'Enviando...' : 'Esqueci minha senha'}</Text>
+          </TouchableOpacity>
+        )}
 
-      <TouchableOpacity onPress={toggleModo}>
-        <Text style={styles.switchText}>
-          {isSignUp ? 'Já tem conta? Entrar' : 'Ainda não tem conta? Cadastre-se'}
-        </Text>
-      </TouchableOpacity>
-    </View>
+        {isSignUp && (
+          <View style={styles.passwordRow}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Confirme a senha"
+              autoCapitalize="none"
+              secureTextEntry={!showConfirmar}
+              value={confirmarSenha}
+              onChangeText={setConfirmarSenha}
+            />
+            <TouchableOpacity onPress={() => setShowConfirmar(!showConfirmar)}>
+              <Ionicons name={showConfirmar ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        <Button
+          label={loading ? 'Aguarde...' : isSignUp ? 'Criar conta' : 'Entrar'}
+          onPress={handleSubmit}
+          disabled={loading}
+          style={{ marginTop: spacing.sm }}
+        />
+
+        <TouchableOpacity onPress={toggleModo}>
+          <Text style={styles.switchText}>
+            {isSignUp ? 'Já tem conta? Entrar' : 'Ainda não tem conta? Cadastre-se'}
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -165,7 +174,7 @@ function traduzErro(code) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: spacing.xxl, backgroundColor: colors.background },
+  container: { flexGrow: 1, justifyContent: 'center', padding: spacing.xxl },
   title: { fontSize: fontSize.display, fontWeight: fontWeight.extrabold, textAlign: 'center', color: colors.primary },
   tagline: { fontSize: fontSize.base, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xl + 8 },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, fontSize: fontSize.base },
