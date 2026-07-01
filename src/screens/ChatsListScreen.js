@@ -5,6 +5,7 @@ import UserName from '../components/UserName';
 import UserAvatar from '../components/UserAvatar';
 import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
+import { colors, spacing, fontSize, fontWeight } from '../constants/theme';
 
 export default function ChatsListScreen({ navigation }) {
   const [chats, setChats] = useState([]);
@@ -28,13 +29,11 @@ export default function ChatsListScreen({ navigation }) {
       <FlatList
         data={chats}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16, gap: 14 }}
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.md + 2 }}
         ListEmptyComponent={<Text style={styles.empty}>Nenhuma conversa ainda.</Text>}
         renderItem={({ item }) => {
           const otherUid = item.participants.find((p) => p !== myUid);
           const otherEmail = item.participantEmails?.[otherUid] || 'Usuário';
-          const nome = otherEmail.split('@')[0];
-          const iniciais = nome.slice(0, 2).toUpperCase();
           return (
             <TouchableOpacity
               style={styles.row}
@@ -58,12 +57,10 @@ export default function ChatsListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff', paddingTop: 12 },
-  title: { fontSize: 16, fontWeight: '700', paddingHorizontal: 16, marginBottom: 8 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  avatar: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#E3F0EA', alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontWeight: '700', fontSize: 13, color: '#0A4334' },
-  name: { fontWeight: '700', fontSize: 14 },
-  last: { fontSize: 12, color: '#5C6962', marginTop: 2 },
-  empty: { textAlign: 'center', color: '#8B958F', marginTop: 40 },
+  container: { flex: 1, backgroundColor: colors.background, paddingTop: spacing.md },
+  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
+  name: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
+  last: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+  empty: { textAlign: 'center', color: colors.textFaint, marginTop: 40 },
 });

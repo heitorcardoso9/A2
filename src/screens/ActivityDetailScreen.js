@@ -5,6 +5,9 @@ import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, doc, 
 import { db, auth } from '../services/firebase';
 import UserAvatar from '../components/UserAvatar';
 import UserName from '../components/UserName';
+import ScreenHeader from '../components/ScreenHeader';
+import Button from '../components/Button';
+import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 export default function ActivityDetailScreen({ navigation, route }) {
   const { activity, mine } = route.params;
@@ -78,8 +81,8 @@ export default function ActivityDetailScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScrollView style={styles.container} contentContainerStyle={{ padding: 18, flexGrow: 1 }}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
+      <ScrollView style={styles.container} contentContainerStyle={{ padding: spacing.xl, flexGrow: 1 }}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginBottom: spacing.xxl + 2 }}>
           <Text style={styles.back}>‹ Voltar</Text>
         </TouchableOpacity>
 
@@ -92,7 +95,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
         ) : (
           <TouchableOpacity style={styles.ownerRow} onPress={() => navigation.navigate('UserProfile', { userId: activity.ownerId })}>
             <UserAvatar userId={activity.ownerId} fallbackEmail={activity.ownerEmail} size={28} />
-            <Text style={[styles.owner, { color: '#0E5C46', fontWeight: '700', marginTop: 0, marginLeft: 8 }]}>
+            <Text style={[styles.owner, styles.ownerLink]}>
               Organizado por <UserName userId={activity.ownerId} fallbackEmail={activity.ownerEmail} /> ›
             </Text>
           </TouchableOpacity>
@@ -112,7 +115,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
                     onPress={() => navigation.navigate('UserProfile', { userId: item.userId })}
                   >
                     <UserAvatar userId={item.userId} fallbackEmail={item.userEmail} size={38} />
-                    <View style={{ flex: 1, marginLeft: 10 }}>
+                    <View style={{ flex: 1, marginLeft: spacing.sm + 2 }}>
                       <Text style={styles.name}>
                         <UserName userId={item.userId} fallbackEmail={item.userEmail} />
                       </Text>
@@ -140,26 +143,22 @@ export default function ActivityDetailScreen({ navigation, route }) {
             )}
           </View>
         ) : (
-          <View style={{ marginTop: 'auto', gap: 10 }}>
-            <TouchableOpacity
-              style={[styles.buttonAccent, sent && styles.buttonDisabled]}
+          <View style={{ marginTop: 'auto', gap: spacing.sm + 2 }}>
+            <Button
+              label={checking ? 'Verificando...' : sent ? '✓ Interesse enviado' : sending ? 'Enviando...' : 'Quero participar'}
+              variant="accent"
               onPress={handleParticipar}
               disabled={sent || sending || checking}
-            >
-              <Text style={styles.buttonText}>
-                {checking ? 'Verificando...' : sent ? '✓ Interesse enviado' : sending ? 'Enviando...' : 'Quero participar'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.buttonOutline}
+            />
+            <Button
+              label="Conversar com quem organizou"
+              variant="outline"
               onPress={() => navigation.navigate('Chat', {
                 withUserId: activity.ownerId,
                 withUserEmail: activity.ownerEmail,
                 activityTitle: activity.title,
               })}
-            >
-              <Text style={styles.buttonOutlineText}>Conversar com quem organizou</Text>
-            </TouchableOpacity>
+            />
           </View>
         )}
       </ScrollView>
@@ -168,28 +167,23 @@ export default function ActivityDetailScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  back: { color: '#0E5C46', fontWeight: '700', marginBottom: 30, fontSize: 16 },
-  chip: { fontSize: 11, fontWeight: '700', backgroundColor: '#E3F0EA', color: '#0A4334', paddingVertical: 3, paddingHorizontal: 9, borderRadius: 999, alignSelf: 'flex-start' },
-  title: { fontSize: 20, fontWeight: '800', marginTop: 10, marginBottom: 10 },
-  meta: { fontSize: 13, color: '#5C6962', marginBottom: 8 },
-  owner: { fontSize: 13, color: '#8B958F', marginTop: 8 },
-  desc: { fontSize: 14, lineHeight: 20, marginTop: 14, marginBottom: 22 },
-  buttonPrimary: { backgroundColor: '#0E5C46', padding: 14, borderRadius: 10 },
-  buttonAccent: { backgroundColor: '#DD6433', padding: 14, borderRadius: 10 },
-  buttonDisabled: { backgroundColor: '#EFEDE7' },
-  buttonOutline: { borderWidth: 1, borderColor: '#ddd', padding: 14, borderRadius: 10 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '700' },
-  buttonOutlineText: { color: '#1B231F', textAlign: 'center', fontWeight: '700' },
-  ownerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#5C6962', marginTop: 20, marginBottom: 10, textTransform: 'uppercase' },
-  empty: { textAlign: 'center', color: '#8B958F', fontSize: 13, marginBottom: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 },
+  container: { flex: 1, backgroundColor: colors.background },
+  back: { color: colors.primary, fontWeight: fontWeight.bold, fontSize: fontSize.xl },
+  chip: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, backgroundColor: colors.primaryTint, color: colors.primaryDark, paddingVertical: 3, paddingHorizontal: spacing.sm + 1, borderRadius: radius.pill, alignSelf: 'flex-start' },
+  title: { fontSize: fontSize.heading, fontWeight: fontWeight.extrabold, marginTop: spacing.md - 2, marginBottom: spacing.md - 2 },
+  meta: { fontSize: fontSize.md, color: colors.textSecondary, marginBottom: spacing.sm },
+  owner: { fontSize: fontSize.md, color: colors.textFaint, marginTop: spacing.sm },
+  ownerLink: { color: colors.primary, fontWeight: fontWeight.bold, marginTop: 0, marginLeft: spacing.sm },
+  desc: { fontSize: fontSize.base, lineHeight: 20, marginTop: spacing.md + 2, marginBottom: spacing.xl + 2 },
+  ownerRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
+  sectionLabel: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary, marginTop: spacing.xl, marginBottom: spacing.md, textTransform: 'uppercase' },
+  empty: { textAlign: 'center', color: colors.textFaint, fontSize: fontSize.md, marginBottom: spacing.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md + 2 },
   rowTouchable: { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  name: { fontWeight: '700', fontSize: 14 },
-  statusLabel: { fontSize: 12, color: '#5C6962' },
-  iconBtnOk: { width: 30, height: 30, borderRadius: 8, backgroundColor: '#E1F0E6', alignItems: 'center', justifyContent: 'center' },
-  iconBtnX: { width: 30, height: 30, borderRadius: 8, backgroundColor: '#EFEDE7', alignItems: 'center', justifyContent: 'center' },
-  iconBtnText: { fontWeight: '700', color: '#1F6B43' },
+  name: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
+  statusLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
+  iconBtnOk: { width: 30, height: 30, borderRadius: radius.sm, backgroundColor: colors.successBg, alignItems: 'center', justifyContent: 'center' },
+  iconBtnX: { width: 30, height: 30, borderRadius: radius.sm, backgroundColor: colors.disabled, alignItems: 'center', justifyContent: 'center' },
+  iconBtnText: { fontWeight: fontWeight.bold, color: colors.success },
   chatBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
 });

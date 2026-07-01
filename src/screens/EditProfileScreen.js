@@ -6,6 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '../services/firebase';
+import ScreenHeader from '../components/ScreenHeader';
+import Button from '../components/Button';
+import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 const TIPOS = ['Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
 const MAX_FOTOS = 6;
@@ -133,14 +136,8 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>‹ Voltar</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Editar perfil</Text>
-        <View style={{ width: 50 }} />
-      </View>
-      <ScrollView contentContainerStyle={{ padding: 18 }}>
+      <ScreenHeader title="Editar perfil" onBack={() => navigation.goBack()} />
+      <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
         <Text style={styles.label}>Fotos ({photos.length}/{MAX_FOTOS})</Text>
         <Text style={styles.hint}>Toque numa foto pra marcar como foto de perfil.</Text>
         <View style={styles.photoGrid}>
@@ -149,20 +146,21 @@ export default function EditProfileScreen({ navigation }) {
               <Image source={{ uri: item.uri }} style={styles.photoImg} />
               {profileId === item.id && (
                 <View style={styles.profileBadge}>
-                  <Ionicons name="star" size={12} color="#fff" />
+                  <Ionicons name="star" size={12} color={colors.white} />
                 </View>
               )}
               <TouchableOpacity style={styles.removeBtn} onPress={() => removerFoto(item)}>
-                <Ionicons name="close" size={12} color="#fff" />
+                <Ionicons name="close" size={12} color={colors.white} />
               </TouchableOpacity>
             </TouchableOpacity>
           ))}
           {photos.length < MAX_FOTOS && (
             <TouchableOpacity style={styles.addPhotoBtn} onPress={adicionarFotos}>
-              <Ionicons name="add" size={24} color="#5C6962" />
+              <Ionicons name="add" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
+
         <Text style={styles.label}>Nome de usuário</Text>
         <TextInput
           style={styles.input}
@@ -198,34 +196,32 @@ export default function EditProfileScreen({ navigation }) {
           ))}
         </View>
 
-        <TouchableOpacity style={styles.button} onPress={handleSalvar} disabled={saving}>
-          <Text style={styles.buttonText}>{saving ? 'Salvando...' : 'Salvar alterações'}</Text>
-        </TouchableOpacity>
+        <Button
+          label={saving ? 'Salvando...' : 'Salvar alterações'}
+          onPress={handleSalvar}
+          disabled={saving}
+          style={{ marginTop: spacing.xl + 6 }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, paddingTop: 20, borderBottomWidth: 1, borderBottomColor: '#eee' },
-  back: { color: '#0E5C46', fontWeight: '700', fontSize: 16 },
-  headerTitle: { fontWeight: '700', fontSize: 16 },
-  label: { fontSize: 13, fontWeight: '700', color: '#5C6962', marginTop: 14, marginBottom: 6 },
-  hint: { fontSize: 12, color: '#8B958F', marginBottom: 10 },
-  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 8 },
-  photoWrap: { width: 84, height: 84, borderRadius: 12 },
-  photoImg: { width: 84, height: 84, borderRadius: 12 },
-  profileBadge: { position: 'absolute', bottom: 4, left: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: '#DD6433', alignItems: 'center', justifyContent: 'center' },
-  removeBtn: { position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: '#1B231F', alignItems: 'center', justifyContent: 'center' },
-  addPhotoBtn: { width: 84, height: 84, borderRadius: 12, borderWidth: 1, borderColor: '#ddd', borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 14 },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 },
-  chip: { borderWidth: 1, borderColor: '#ddd', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14 },
-  chipActive: { backgroundColor: '#0E5C46', borderColor: '#0E5C46' },
-  chipText: { color: '#5C6962', fontWeight: '600', fontSize: 13 },
-  chipTextActive: { color: '#fff' },
-  button: { backgroundColor: '#0E5C46', padding: 14, borderRadius: 10, marginTop: 26 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '700' },
-  counter: { fontSize: 11, color: '#8B958F', textAlign: 'right', marginTop: 4 },
+  container: { flex: 1, backgroundColor: colors.background },
+  label: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary, marginTop: spacing.md + 2, marginBottom: spacing.sm - 2 },
+  hint: { fontSize: fontSize.sm, color: colors.textFaint, marginBottom: spacing.sm + 2 },
+  photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm + 2, marginBottom: spacing.sm },
+  photoWrap: { width: 84, height: 84, borderRadius: radius.lg - 2 },
+  photoImg: { width: 84, height: 84, borderRadius: radius.lg - 2 },
+  profileBadge: { position: 'absolute', bottom: 4, left: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center' },
+  removeBtn: { position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.text, alignItems: 'center', justifyContent: 'center' },
+  addPhotoBtn: { width: 84, height: 84, borderRadius: radius.lg - 2, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.base },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  chip: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: spacing.md + 2 },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.textSecondary, fontWeight: fontWeight.semibold, fontSize: fontSize.md },
+  chipTextActive: { color: colors.white },
+  counter: { fontSize: fontSize.xs, color: colors.textFaint, textAlign: 'right', marginTop: 4 },
 });

@@ -5,6 +5,7 @@ import UserAvatar from '../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
+import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 function getChatId(uid1, uid2) {
   return [uid1, uid2].sort().join('_');
@@ -63,7 +64,7 @@ export default function ChatScreen({ navigation, route }) {
       behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? bottomInset : 0}
     >
-      <View style={[styles.header, { paddingTop: topInset + 12 }]}>
+      <View style={[styles.header, { paddingTop: topInset + spacing.md }]}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Text style={styles.back}>‹ Voltar</Text>
         </TouchableOpacity>
@@ -80,7 +81,7 @@ export default function ChatScreen({ navigation, route }) {
         ref={listRef}
         data={messages}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={{ padding: 16, gap: 10 }}
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.md - 2 }}
         onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
         renderItem={({ item }) => {
           const mine = item.senderId === myUid;
@@ -101,7 +102,7 @@ export default function ChatScreen({ navigation, route }) {
           onSubmitEditing={handleSend}
         />
         <TouchableOpacity style={styles.sendBtn} onPress={handleSend}>
-          <Text style={{ color: '#fff', fontWeight: '700' }}>➤</Text>
+          <Text style={{ color: colors.white, fontWeight: fontWeight.bold }}>➤</Text>
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -109,18 +110,18 @@ export default function ChatScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#EBF1EC' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#eee' },
-  back: { color: '#0E5C46', fontWeight: '700', fontSize: 16 },
-  headerInfo: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontWeight: '700', fontSize: 14 },
-  activity: { fontSize: 12, color: '#5C6962' },
-  bubble: { maxWidth: '75%', padding: 10, borderRadius: 16 },
-  bubbleMine: { backgroundColor: '#0E5C46', alignSelf: 'flex-end', borderBottomRightRadius: 4 },
-  bubbleTheirs: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#eee', alignSelf: 'flex-start', borderBottomLeftRadius: 4 },
-  bubbleText: { fontSize: 14, color: '#1B231F' },
-  bubbleTextMine: { fontSize: 14, color: '#fff' },
-  inputBar: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 12, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#eee' },
-  input: { flex: 1, borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14 },
-  sendBtn: { backgroundColor: '#DD6433', width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: colors.backgroundAlt },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingBottom: spacing.md, backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
+  back: { color: colors.primary, fontWeight: fontWeight.bold, fontSize: fontSize.xl },
+  headerInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  name: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
+  activity: { fontSize: fontSize.sm, color: colors.textSecondary },
+  bubble: { maxWidth: '75%', padding: spacing.sm + 2, borderRadius: 16 },
+  bubbleMine: { backgroundColor: colors.primary, alignSelf: 'flex-end', borderBottomRightRadius: 4 },
+  bubbleTheirs: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderLight, alignSelf: 'flex-start', borderBottomLeftRadius: 4 },
+  bubbleText: { fontSize: fontSize.base, color: colors.text },
+  bubbleTextMine: { fontSize: fontSize.base, color: colors.white },
+  inputBar: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.md, paddingTop: spacing.md, backgroundColor: colors.background, borderTopWidth: 1, borderTopColor: colors.borderLight },
+  input: { flex: 1, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, fontSize: fontSize.base },
+  sendBtn: { backgroundColor: colors.accent, width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
 });

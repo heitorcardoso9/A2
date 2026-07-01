@@ -4,6 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import PhotoViewerModal from '../components/PhotoViewerModal';
+import ScreenHeader from '../components/ScreenHeader';
+import Button from '../components/Button';
+import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 export default function UserProfileScreen({ navigation, route }) {
   const { userId } = route.params;
@@ -23,7 +26,7 @@ export default function UserProfileScreen({ navigation, route }) {
   if (loading) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ActivityIndicator style={{ marginTop: 60 }} color="#0E5C46" />
+        <ActivityIndicator style={{ marginTop: 60 }} color={colors.primary} />
       </SafeAreaView>
     );
   }
@@ -31,9 +34,7 @@ export default function UserProfileScreen({ navigation, route }) {
   if (!profile) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>‹ Voltar</Text>
-        </TouchableOpacity>
+        <ScreenHeader onBack={() => navigation.goBack()} />
         <Text style={styles.empty}>Não foi possível encontrar esse perfil.</Text>
       </SafeAreaView>
     );
@@ -52,12 +53,8 @@ export default function UserProfileScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>‹ Voltar</Text>
-        </TouchableOpacity>
-      </View>
-      <View style={{ padding: 18 }}>
+      <ScreenHeader onBack={() => navigation.goBack()} />
+      <View style={{ padding: spacing.xl }}>
         <View style={styles.head}>
           <TouchableOpacity onPress={() => allPhotoUrls.length > 0 && abrirFoto(0)}>
             {profile.profilePhotoUrl ? (
@@ -76,7 +73,7 @@ export default function UserProfileScreen({ navigation, route }) {
             data={outrasFotos}
             horizontal
             keyExtractor={(item) => item.path}
-            contentContainerStyle={{ gap: 8, paddingBottom: 14 }}
+            contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.lg }}
             showsHorizontalScrollIndicator={false}
             renderItem={({ item, index }) => (
               <TouchableOpacity onPress={() => abrirFoto(index + (profile.profilePhotoUrl ? 1 : 0))}>
@@ -101,12 +98,10 @@ export default function UserProfileScreen({ navigation, route }) {
         </View>
 
         {userId !== auth.currentUser.uid && (
-          <TouchableOpacity
-            style={styles.button}
+          <Button
+            label="Conversar"
             onPress={() => navigation.navigate('Chat', { withUserId: userId, withUserEmail: profile.email })}
-          >
-            <Text style={styles.buttonText}>Conversar</Text>
-          </TouchableOpacity>
+          />
         )}
       </View>
 
@@ -121,21 +116,16 @@ export default function UserProfileScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { paddingHorizontal: 16, paddingBottom: 8 },
-  back: { color: '#0E5C46', fontWeight: '700', fontSize: 16 },
-  head: { alignItems: 'center', marginBottom: 14 },
-  username: { fontWeight: '700', fontSize: 15, marginBottom: 2 },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E3F0EA', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  avatarImg: { width: 100, height: 100, borderRadius: 50, marginBottom: 8 },
-  avatarText: { fontWeight: '700', fontSize: 18, color: '#0A4334' },
-  email: { fontSize: 13, color: '#5C6962' },
-  thumb: { width: 56, height: 56, borderRadius: 8 },
-  bio: { fontSize: 13, color: '#5C6962', textAlign: 'center', marginBottom: 14, lineHeight: 19 },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 20 },
-  chip: { backgroundColor: '#E3F0EA', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#0A4334' },
-  button: { backgroundColor: '#0E5C46', padding: 14, borderRadius: 10, marginTop: 8 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '700' },
-  empty: { textAlign: 'center', color: '#8B958F', fontSize: 13 },
+  container: { flex: 1, backgroundColor: colors.background },
+  head: { alignItems: 'center', marginBottom: spacing.md + 2 },
+  username: { fontWeight: fontWeight.bold, fontSize: fontSize.lg, marginBottom: 2 },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  avatarImg: { width: 100, height: 100, borderRadius: 50, marginBottom: spacing.sm },
+  avatarText: { fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: colors.primaryDark },
+  thumb: { width: 56, height: 56, borderRadius: radius.sm },
+  bio: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md + 2, lineHeight: 19 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: spacing.xl },
+  chip: { backgroundColor: colors.primaryTint, borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: spacing.md },
+  chipText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primaryDark },
+  empty: { textAlign: 'center', color: colors.textFaint, fontSize: fontSize.md },
 });

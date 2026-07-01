@@ -5,6 +5,9 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import SearchablePickerModal from '../components/SearchablePickerModal';
+import ScreenHeader from '../components/ScreenHeader';
+import Button from '../components/Button';
+import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 const TIPOS = ['Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
 
@@ -40,7 +43,7 @@ export default function CreateActivityScreen({ navigation, route }) {
     fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
       .then((r) => r.json())
       .then(setEstados)
-      .catch(() => { });
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -169,21 +172,14 @@ export default function CreateActivityScreen({ navigation, route }) {
   const nomeEstadoSelecionado = uf ? estados.find((e) => e.sigla === uf)?.nome : '';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.header}>
-          {isEditing ? (
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Text style={styles.back}>‹ Voltar</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={{ width: 50 }} />
-          )}
-          <Text style={styles.headerTitle}>{isEditing ? 'Editar atividade' : 'Criar atividade'}</Text>
-          <View style={{ width: 50 }} />
-        </View>
+        <ScreenHeader
+          title={isEditing ? 'Editar atividade' : 'Criar atividade'}
+          onBack={isEditing ? () => navigation.goBack() : null}
+        />
 
-        <ScrollView contentContainerStyle={{ padding: 18 }} keyboardShouldPersistTaps="handled">
+        <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
           <Text style={styles.label}>Tipo</Text>
           <View style={styles.chipRow}>
             {TIPOS.map((t) => (
@@ -256,14 +252,15 @@ export default function CreateActivityScreen({ navigation, route }) {
           />
           <Text style={styles.counter}>{desc.length}/500</Text>
 
-          <TouchableOpacity style={styles.button} onPress={handlePublicar} disabled={loading}>
-            <Text style={styles.buttonText}>{loading ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Publicar atividade'}</Text>
-          </TouchableOpacity>
+          <Button
+            label={loading ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Publicar atividade'}
+            onPress={handlePublicar}
+            disabled={loading}
+            style={{ marginTop: spacing.xl + 2 }}
+          />
 
           {!isEditing && (
-            <TouchableOpacity style={styles.buttonGhost} onPress={handleCancelar} disabled={loading}>
-              <Text style={styles.buttonGhostText}>Cancelar</Text>
-            </TouchableOpacity>
+            <Button label="Cancelar" variant="ghost" onPress={handleCancelar} disabled={loading} style={{ marginTop: spacing.sm }} />
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -290,24 +287,17 @@ export default function CreateActivityScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 12, paddingTop: 8 },
-  back: { color: '#0E5C46', fontWeight: '700', fontSize: 16 },
-  headerTitle: { fontWeight: '700', fontSize: 16 },
-  label: { fontSize: 13, fontWeight: '700', color: '#5C6962', marginTop: 14, marginBottom: 6 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, fontSize: 14, justifyContent: 'center' },
+  container: { flex: 1, backgroundColor: colors.background },
+  label: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary, marginTop: spacing.md + 2, marginBottom: spacing.sm - 2 },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.base, justifyContent: 'center' },
   inputDisabled: { opacity: 0.5 },
-  inputText: { fontSize: 14, color: '#1B231F' },
-  doneBtn: { alignSelf: 'flex-end', paddingVertical: 8, paddingHorizontal: 4 },
-  doneBtnText: { color: '#0E5C46', fontWeight: '700', fontSize: 14 },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { borderWidth: 1, borderColor: '#ddd', borderRadius: 999, paddingVertical: 6, paddingHorizontal: 14 },
-  chipActive: { backgroundColor: '#0E5C46', borderColor: '#0E5C46' },
-  chipText: { color: '#5C6962', fontWeight: '600', fontSize: 13 },
-  chipTextActive: { color: '#fff' },
-  button: { backgroundColor: '#0E5C46', padding: 14, borderRadius: 10, marginTop: 22 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '700' },
-  buttonGhost: { padding: 12, marginTop: 8 },
-  buttonGhostText: { textAlign: 'center', fontWeight: '700', color: '#5C6962' },
-  counter: { fontSize: 11, color: '#8B958F', textAlign: 'right', marginTop: 4 },
+  inputText: { fontSize: fontSize.base, color: colors.text },
+  doneBtn: { alignSelf: 'flex-end', paddingVertical: spacing.sm, paddingHorizontal: 4 },
+  doneBtnText: { color: colors.primary, fontWeight: fontWeight.bold, fontSize: fontSize.base },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  chip: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: spacing.md + 2 },
+  chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipText: { color: colors.textSecondary, fontWeight: fontWeight.semibold, fontSize: fontSize.md },
+  chipTextActive: { color: colors.white },
+  counter: { fontSize: fontSize.xs, color: colors.textFaint, textAlign: 'right', marginTop: 4 },
 });

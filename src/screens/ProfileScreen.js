@@ -6,6 +6,8 @@ import { signOut } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, where, getDoc, deleteDoc, getDocs } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import PhotoViewerModal from '../components/PhotoViewerModal';
+import Button from '../components/Button';
+import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 export default function ProfileScreen({ navigation }) {
   const myUid = auth.currentUser.uid;
@@ -95,7 +97,7 @@ export default function ProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: 18 }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
         <View style={styles.head}>
           <TouchableOpacity onPress={() => allPhotoUrls.length > 0 && abrirFoto(0)}>
             {profile.profilePhotoUrl ? (
@@ -115,7 +117,7 @@ export default function ProfileScreen({ navigation }) {
             data={outrasFotos}
             horizontal
             keyExtractor={(item) => item.path}
-            contentContainerStyle={{ gap: 8, paddingBottom: 14, flexGrow: 1, justifyContent: 'center' }}
+            contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md + 2, flexGrow: 1, justifyContent: 'center' }}
             showsHorizontalScrollIndicator={false}
             renderItem={({ item, index }) => (
               <TouchableOpacity onPress={() => abrirFoto(index + (profile.profilePhotoUrl ? 1 : 0))}>
@@ -139,20 +141,16 @@ export default function ProfileScreen({ navigation }) {
           )}
         </View>
 
-        <TouchableOpacity style={styles.buttonOutline} onPress={() => navigation.navigate('EditProfile')}>
-          <Text style={styles.buttonOutlineText}>Editar perfil</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.buttonGhost} onPress={handleSair}>
-          <Text style={styles.buttonGhostText}>Sair</Text>
-        </TouchableOpacity>
+        <Button label="Editar perfil" variant="outline" onPress={() => navigation.navigate('EditProfile')} style={{ marginBottom: spacing.sm }} />
+        <Button label="Sair" variant="ghost" onPress={handleSair} />
 
         <TouchableOpacity style={styles.sectionHeader} onPress={() => setExpandParticipar(!expandParticipar)}>
           <Text style={styles.sectionLabel}>Vou participar ({participacoes.length})</Text>
-          <Ionicons name={expandParticipar ? 'chevron-up' : 'chevron-down'} size={18} color="#5C6962" />
+          <Ionicons name={expandParticipar ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
         </TouchableOpacity>
         {expandParticipar && (
           participacoes.length === 0 ? (
-            <Text style={[styles.empty, { marginBottom: 18 }]}>Você ainda não demonstrou interesse em nenhuma atividade.</Text>
+            <Text style={[styles.empty, { marginBottom: spacing.xl }]}>Você ainda não demonstrou interesse em nenhuma atividade.</Text>
           ) : (
             participacoes.map((p) => (
               <TouchableOpacity
@@ -161,7 +159,7 @@ export default function ProfileScreen({ navigation }) {
                 onPress={() => navigation.navigate('ActivityDetail', { activity: p.activity, mine: p.activity.ownerId === myUid })}
               >
                 <View style={{ flex: 1 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                     <Text style={styles.activityTitle} numberOfLines={1} ellipsizeMode="tail">{p.activity.title}</Text>
                     <Text style={[styles.statusBadge, styles[STATUS_STYLE_KEY[p.status]]]}>{labelStatus(p.status)}</Text>
                   </View>
@@ -174,7 +172,7 @@ export default function ProfileScreen({ navigation }) {
 
         <TouchableOpacity style={styles.sectionHeader} onPress={() => setExpandMinhas(!expandMinhas)}>
           <Text style={styles.sectionLabel}>Minhas atividades ({minhasAtividades.length})</Text>
-          <Ionicons name={expandMinhas ? 'chevron-up' : 'chevron-down'} size={18} color="#5C6962" />
+          <Ionicons name={expandMinhas ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
         </TouchableOpacity>
         {expandMinhas && (
           minhasAtividades.length === 0 ? (
@@ -208,31 +206,27 @@ export default function ProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  head: { alignItems: 'center', marginBottom: 14 },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#E3F0EA', alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  avatarImg: { width: 64, height: 64, borderRadius: 32, marginBottom: 8 },
-  avatarText: { fontWeight: '700', fontSize: 18, color: '#0A4334' },
-  username: { fontWeight: '700', fontSize: 16, marginTop: 2 },
-  email: { fontSize: 12, color: '#8B958F', marginTop: 1 },
-  thumb: { width: 56, height: 56, borderRadius: 8 },
-  bio: { fontSize: 13, color: '#5C6962', textAlign: 'center', marginBottom: 14, lineHeight: 19 },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 20 },
-  chip: { backgroundColor: '#E3F0EA', borderRadius: 999, paddingVertical: 4, paddingHorizontal: 12 },
-  chipText: { fontSize: 12, fontWeight: '600', color: '#0A4334' },
-  buttonOutline: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, marginBottom: 8 },
-  buttonOutlineText: { textAlign: 'center', fontWeight: '700', color: '#1B231F' },
-  buttonGhost: { padding: 12 },
-  buttonGhostText: { textAlign: 'center', fontWeight: '700', color: '#5C6962' },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 18, marginBottom: 10, paddingVertical: 4 },
-  sectionLabel: { fontSize: 13, fontWeight: '700', color: '#5C6962', textTransform: 'uppercase' },
-  activityRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#eee', borderRadius: 12, padding: 12, marginBottom: 10 },
+  container: { flex: 1, backgroundColor: colors.background },
+  head: { alignItems: 'center', marginBottom: spacing.md + 2 },
+  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  avatarImg: { width: 64, height: 64, borderRadius: 32, marginBottom: spacing.sm },
+  avatarText: { fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: colors.primaryDark },
+  username: { fontWeight: fontWeight.bold, fontSize: fontSize.xl, marginTop: 2 },
+  email: { fontSize: fontSize.sm, color: colors.textFaint, marginTop: 1 },
+  thumb: { width: 56, height: 56, borderRadius: radius.sm },
+  bio: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md + 2, lineHeight: 19 },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: spacing.xl },
+  chip: { backgroundColor: colors.primaryTint, borderRadius: radius.pill, paddingVertical: 4, paddingHorizontal: spacing.md },
+  chipText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primaryDark },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl - 2, marginBottom: spacing.md, paddingVertical: 4 },
+  sectionLabel: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary, textTransform: 'uppercase' },
+  activityRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.borderLight, borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm + 2 },
   activityIconBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
-  activityTitle: { fontWeight: '700', fontSize: 14, flex: 1 },
-  activityMeta: { fontSize: 12, color: '#5C6962', marginTop: 2 },
-  empty: { textAlign: 'center', color: '#8B958F', fontSize: 13 },
-  statusBadge: { fontSize: 11, fontWeight: '700', paddingVertical: 3, paddingHorizontal: 9, borderRadius: 999, flexShrink: 0 },
-  statusPendente: { backgroundColor: '#FCEEDB', color: '#8A5A12' },
-  statusConfirmado: { backgroundColor: '#E1F0E6', color: '#1F6B43' },
-  statusRecusado: { backgroundColor: '#EFEDE7', color: '#6B6B63' },
+  activityTitle: { fontWeight: fontWeight.bold, fontSize: fontSize.base, flex: 1 },
+  activityMeta: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 2 },
+  empty: { textAlign: 'center', color: colors.textFaint, fontSize: fontSize.md },
+  statusBadge: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, paddingVertical: 3, paddingHorizontal: spacing.sm + 1, borderRadius: radius.pill, flexShrink: 0 },
+  statusPendente: { backgroundColor: colors.warningBg, color: colors.warning },
+  statusConfirmado: { backgroundColor: colors.successBg, color: colors.success },
+  statusRecusado: { backgroundColor: colors.disabled, color: colors.textSecondary },
 });

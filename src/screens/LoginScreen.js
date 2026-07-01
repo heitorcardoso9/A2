@@ -4,6 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
+import Button from '../components/Button';
+import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
@@ -106,7 +108,7 @@ export default function LoginScreen({ navigation }) {
           onChangeText={setSenha}
         />
         <TouchableOpacity onPress={() => setShowSenha(!showSenha)}>
-          <Ionicons name={showSenha ? 'eye-off' : 'eye'} size={20} color="#5C6962" />
+          <Ionicons name={showSenha ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -127,14 +129,17 @@ export default function LoginScreen({ navigation }) {
             onChangeText={setConfirmarSenha}
           />
           <TouchableOpacity onPress={() => setShowConfirmar(!showConfirmar)}>
-            <Ionicons name={showConfirmar ? 'eye-off' : 'eye'} size={20} color="#5C6962" />
+            <Ionicons name={showConfirmar ? 'eye-off' : 'eye'} size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
       )}
 
-      <TouchableOpacity style={styles.button} onPress={handleSubmit} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Aguarde...' : isSignUp ? 'Criar conta' : 'Entrar'}</Text>
-      </TouchableOpacity>
+      <Button
+        label={loading ? 'Aguarde...' : isSignUp ? 'Criar conta' : 'Entrar'}
+        onPress={handleSubmit}
+        disabled={loading}
+        style={{ marginTop: spacing.sm }}
+      />
 
       <TouchableOpacity onPress={toggleModo}>
         <Text style={styles.switchText}>
@@ -160,15 +165,13 @@ function traduzErro(code) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 28, backgroundColor: '#fff' },
-  title: { fontSize: 26, fontWeight: '800', textAlign: 'center', color: '#0E5C46' },
-  tagline: { fontSize: 14, color: '#5C6962', textAlign: 'center', marginBottom: 28 },
-  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 10, padding: 12, marginBottom: 12, fontSize: 14 },
-  passwordRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#ddd', borderRadius: 10, paddingHorizontal: 12, marginBottom: 12 },
-  passwordInput: { flex: 1, paddingVertical: 12, fontSize: 14 },
-  forgotWrap: { alignSelf: 'flex-end', marginTop: -6, marginBottom: 12 },
-  forgotText: { color: '#0E5C46', fontWeight: '600', fontSize: 13 },
-  button: { backgroundColor: '#0E5C46', padding: 14, borderRadius: 10, marginTop: 8 },
-  buttonText: { color: '#fff', textAlign: 'center', fontWeight: '700' },
-  switchText: { textAlign: 'center', marginTop: 16, color: '#0E5C46', fontWeight: '600' },
+  container: { flex: 1, justifyContent: 'center', padding: spacing.xxl, backgroundColor: colors.background },
+  title: { fontSize: fontSize.display, fontWeight: fontWeight.extrabold, textAlign: 'center', color: colors.primary },
+  tagline: { fontSize: fontSize.base, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xl + 8 },
+  input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md, fontSize: fontSize.base },
+  passwordRow: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, marginBottom: spacing.md },
+  passwordInput: { flex: 1, paddingVertical: spacing.md, fontSize: fontSize.base },
+  forgotWrap: { alignSelf: 'flex-end', marginTop: -6, marginBottom: spacing.md },
+  forgotText: { color: colors.primary, fontWeight: fontWeight.semibold, fontSize: fontSize.md },
+  switchText: { textAlign: 'center', marginTop: spacing.lg, color: colors.primary, fontWeight: fontWeight.semibold },
 });

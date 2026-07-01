@@ -2,6 +2,7 @@ import React from 'react';
 import { Modal, View, Image, TouchableOpacity, FlatList, StyleSheet, Dimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { spacing } from '../constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -12,7 +13,7 @@ export default function PhotoViewerModal({ visible, photos, initialIndex = 0, on
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
-        <TouchableOpacity style={[styles.closeBtn, { top: insets.top + 16 }]} onPress={onClose}>
+        <TouchableOpacity style={[styles.closeBtn, { top: insets.top + spacing.lg }]} onPress={onClose}>
           <Ionicons name="close" size={28} color="#fff" />
         </TouchableOpacity>
         <FlatList
