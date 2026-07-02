@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "companhia",
+    "name": "Companhia",
     "slug": "companhia",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,13 +20,19 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.companhia.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "@react-native-community/datetimepicker"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "69982f5a-8f7d-4c22-8c55-903303778e95"
+      }
+    }
   }
 }
