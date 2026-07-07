@@ -82,7 +82,7 @@ export default function FeedScreen({ navigation }) {
     fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
       .then((r) => r.json())
       .then(setEstados)
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -251,55 +251,56 @@ export default function FeedScreen({ navigation }) {
 
       <Modal visible={showFiltrosModal} transparent animationType="slide" onRequestClose={() => setShowFiltrosModal(false)}>
         <Pressable style={styles.modalBackdrop} onPress={() => setShowFiltrosModal(false)}>
-          <Pressable style={styles.modalCard} onPress={() => {}}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Filtros</Text>
-                <TouchableOpacity onPress={() => setShowFiltrosModal(false)}>
-                  <Ionicons name="close" size={20} color={colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
+          {/* Substituído o onPress vazio por stopPropagation para blindar o modal contra cliques fantasmas */}
+          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Filtros</Text>
+              <TouchableOpacity onPress={() => setShowFiltrosModal(false)} hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}>
+                <Ionicons name="close" size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
 
-              <Text style={styles.modalLabel}>Período</Text>
-              <Text style={styles.periodoResumo}>
-                {dataInicio && dataFim
-                  ? `${formatarDataCurta(dataInicio)} até ${formatarDataCurta(dataFim)}`
-                  : dataInicio
+            <Text style={styles.modalLabel}>Período</Text>
+            <Text style={styles.periodoResumo}>
+              {dataInicio && dataFim
+                ? `${formatarDataCurta(dataInicio)} até ${formatarDataCurta(dataFim)}`
+                : dataInicio
                   ? `${formatarDataCurta(dataInicio)} até... (toque na data final)`
                   : 'Toque numa data para começar'}
+            </Text>
+
+            <Calendar
+              markingType="period"
+              markedDates={markedDates}
+              onDayPress={handleDiaPress}
+              minDate={toDateString(new Date())}
+              theme={{
+                todayTextColor: colors.primary,
+                arrowColor: colors.primary,
+                textDayFontSize: 13,
+                textMonthFontSize: 14,
+              }}
+            />
+
+            <Text style={styles.modalLabel}>Local</Text>
+            <TouchableOpacity style={styles.modalInput} onPress={() => setShowEstadoModal(true)}>
+              <Text style={styles.modalInputText}>{nomeEstadoFiltro || 'Qualquer estado'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modalInput, { marginTop: spacing.sm }, !ufFiltro && styles.inputDisabled]}
+              onPress={() => ufFiltro && setShowCidadeModal(true)}
+              disabled={!ufFiltro}
+            >
+              <Text style={styles.modalInputText}>
+                {cidadeFiltro || (!ufFiltro ? 'Selecione o estado primeiro' : carregandoCidades ? 'Carregando...' : 'Qualquer cidade')}
               </Text>
-              <Calendar
-                markingType="period"
-                markedDates={markedDates}
-                onDayPress={handleDiaPress}
-                minDate={toDateString(new Date())}
-                theme={{
-                  todayTextColor: colors.primary,
-                  arrowColor: colors.primary,
-                  textDayFontSize: 13,
-                  textMonthFontSize: 14,
-                }}
-              />
+            </TouchableOpacity>
 
-              <Text style={styles.modalLabel}>Local</Text>
-              <TouchableOpacity style={styles.modalInput} onPress={() => setShowEstadoModal(true)}>
-                <Text style={styles.modalInputText}>{nomeEstadoFiltro || 'Qualquer estado'}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalInput, { marginTop: spacing.sm }, !ufFiltro && styles.inputDisabled]}
-                onPress={() => ufFiltro && setShowCidadeModal(true)}
-                disabled={!ufFiltro}
-              >
-                <Text style={styles.modalInputText}>
-                  {cidadeFiltro || (!ufFiltro ? 'Selecione o estado primeiro' : carregandoCidades ? 'Carregando...' : 'Qualquer cidade')}
-                </Text>
-              </TouchableOpacity>
-
-              <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xl, marginBottom: 4 }}>
-                <Button label="Limpar" variant="outline" onPress={limparFiltros} style={{ flex: 1 }} />
-                <Button label="Aplicar" onPress={() => setShowFiltrosModal(false)} style={{ flex: 1 }} />
-              </View>
-            </ScrollView>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xl, marginBottom: 4 }}>
+              <Button label="Limpar" variant="outline" onPress={limparFiltros} style={{ flex: 1 }} />
+              <Button label="Aplicar" onPress={() => setShowFiltrosModal(false)} style={{ flex: 1 }} />
+            </View>
           </Pressable>
         </Pressable>
       </Modal>
