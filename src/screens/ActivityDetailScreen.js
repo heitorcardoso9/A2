@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Dimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserAvatar from '../components/UserAvatar';
 import UserName from '../components/UserName';
+import PhotoViewerModal from '../components/PhotoViewerModal';
 import Button from '../components/Button';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ActivityDetailScreen({ navigation, route }) {
   const { activity, mine } = route.params;
@@ -15,6 +18,8 @@ export default function ActivityDetailScreen({ navigation, route }) {
   const [checking, setChecking] = useState(!mine);
   const [sending, setSending] = useState(false);
   const [interessados, setInteressados] = useState([]);
+  const [viewerVisible, setViewerVisible] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
 
   useEffect(() => {
     if (mine) return;
@@ -102,6 +107,40 @@ export default function ActivityDetailScreen({ navigation, route }) {
             </Text>
           </TouchableOpacity>
         )}
+
+        {activity.photoUrls && activity.photoUrls.length > 0 && (
+          <View style={styles.photoSection}>
+            <View style={styles.photoGrid}>
+              {activity.photoUrls.slice(0, 4).map((url, index) => {
+                const ehUltimoVisivel = index === 3 && activity.photoUrls.length > 4;
+                const quantiaEscondida = activity.photoUrls.length - 4;
+                return (
+                  <TouchableOpacity
+                    key={`${url}-${index}`}
+                    style={[
+                      styles.thumbWrap,
+                      activity.photoUrls.length === 1 && styles.thumbSingle,
+                    ]}
+                    onPress={() => {
+                      setViewerIndex(index);
+                      setViewerVisible(true);
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Image source={{ uri: typeof url === 'string' ? url : url.url }} style={styles.thumbImg} resizeMode="cover" />
+                    {ehUltimoVisivel && (
+                      <View style={styles.moreOverlay}>
+                        <Ionicons name="images-outline" size={16} color={colors.white} />
+                        <Text style={styles.moreText}>+{quantiaEscondida}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         <Text style={styles.desc}>{activity.desc}</Text>
 
         {mine && (
@@ -167,6 +206,13 @@ export default function ActivityDetailScreen({ navigation, route }) {
           />
         </View>
       )}
+
+      <PhotoViewerModal
+        visible={viewerVisible}
+        photos={activity.photoUrls?.map?.((u) => (typeof u === 'string' ? u : u.url)) || []}
+        initialIndex={viewerIndex}
+        onClose={() => setViewerVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -179,6 +225,33 @@ const styles = StyleSheet.create({
   meta: { fontSize: fontSize.md, color: colors.textSecondary, marginBottom: spacing.sm },
   owner: { fontSize: fontSize.md, color: colors.textFaint, marginTop: spacing.sm },
   ownerLink: { color: colors.primary, fontWeight: fontWeight.bold, marginTop: 0, marginLeft: spacing.sm },
+  photoSection: { marginTop: spacing.md, marginBottom: spacing.sm },
+  photoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+  },
+  thumbWrap: {
+    width: (SCREEN_WIDTH - spacing.xl * 2 - spacing.sm) / 2,
+    height: 130,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.disabled,
+  },
+  thumbSingle: {
+    width: SCREEN_WIDTH - spacing.xl * 2,
+    height: 220,
+  },
+  thumbImg: { width: '100%', height: '100%' },
+  moreOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  moreText: { color: colors.white, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   desc: { fontSize: fontSize.base, lineHeight: 20, marginTop: spacing.md + 2, marginBottom: spacing.xl + 2 },
   ownerRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.sm },
   sectionLabel: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary, marginTop: spacing.xl, marginBottom: spacing.md, textTransform: 'uppercase' },

@@ -1,15 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList, ScrollView, TextInput, TouchableOpacity, StyleSheet, Modal, Pressable } from 'react-native';
+import { View, Text, FlatList, ScrollView, TextInput, TouchableOpacity, StyleSheet, Modal, Pressable, Image, Dimensions, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserName from '../components/UserName';
+import UserAvatar from '../components/UserAvatar';
 import SearchablePickerModal from '../components/SearchablePickerModal';
 import Button from '../components/Button';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 import { useIBGEEstados, useIBGECidades } from '../hooks/useIBGELocations';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 LocaleConfig.locales['pt-br'] = {
   monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
@@ -208,22 +211,63 @@ export default function FeedScreen({ navigation }) {
         ListEmptyComponent={<Text style={styles.empty}>Nenhuma atividade encontrada com esses filtros.</Text>}
         renderItem={({ item }) => {
           const mine = item.ownerId === auth.currentUser?.uid;
+          const coverUrl =
+            item.photoUrls && item.photoUrls.length > 0
+              ? (typeof item.photoUrls[0] === 'string' ? item.photoUrls[0] : item.photoUrls[0].url)
+              : null;
+          const extrasCount = (item.photoUrls?.length || 0) - 1;
           return (
             <TouchableOpacity
               style={styles.card}
+              activeOpacity={0.82}
               onPress={() => navigation.navigate('ActivityDetail', { activity: item, mine })}
             >
-              <View style={{ flexDirection: 'row', gap: 6 }}>
-                <Text style={styles.chip}>{item.type}</Text>
-                {mine && <Text style={[styles.chip, styles.chipMine]}>Sua atividade</Text>}
-              </View>
-              <Text style={styles.cardTitle}>{item.title}</Text>
-              <Text style={styles.cardMeta}>{item.date} · {item.local}</Text>
-              {!mine && (
-                <Text style={styles.cardOwner}>
-                  com <UserName userId={item.ownerId} fallbackEmail={item.ownerEmail} />
-                </Text>
+              {coverUrl ? (
+                <View style={styles.coverWrap}>
+                  <Image source={{ uri: coverUrl }} style={styles.coverImg} resizeMode="cover" />
+                  {extrasCount > 0 && (
+                    <View style={styles.extrasBadge}>
+                      <Ionicons name="images-outline" size={13} color={colors.white} />
+                      <Text style={styles.extrasBadgeText}>+{extrasCount}</Text>
+                    </View>
+                  )}
+                </View>
+              ) : (
+                <View style={[styles.coverWrap, styles.coverEmpty]}>
+                  <Ionicons name="calendar-outline" size={38} color={colors.textFaint} />
+                  <Text style={styles.coverEmptyText}>Sem foto</Text>
+                </View>
               )}
+
+              <View style={styles.cardBody}>
+                <View style={styles.chipsRow}>
+                  <Text style={styles.chip}>{item.type}</Text>
+                  {mine && <Text style={[styles.chip, styles.chipMine]}>Sua</Text>}
+                </View>
+
+                <Text style={styles.cardTitle} numberOfLines={2} ellipsizeMode="tail">
+                  {item.title}
+                </Text>
+
+                <View style={styles.cardMetaRow}>
+                  <Ionicons name="calendar-outline" size={14} color={colors.textFaint} />
+                  <Text style={styles.cardMetaText}>{item.date}</Text>
+                </View>
+                <View style={styles.cardMetaRow}>
+                  <Ionicons name="location-outline" size={14} color={colors.textFaint} />
+                  <Text style={styles.cardMetaText} numberOfLines={1}>{item.local}</Text>
+                </View>
+
+                <View style={styles.footerRow}>
+                  <View style={styles.ownerWrap}>
+                    <UserAvatar userId={item.ownerId} fallbackEmail={item.ownerEmail} size={22} />
+                    <Text style={styles.cardOwner} numberOfLines={1}>
+                      <UserName userId={item.ownerId} fallbackEmail={item.ownerEmail} />
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={colors.textFaint} />
+                </View>
+              </View>
             </TouchableOpacity>
           );
         }}
@@ -320,12 +364,104 @@ const styles = StyleSheet.create({
   filterTextActive: { color: colors.white },
   searchWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.sm + 2 },
   searchInput: { flex: 1, paddingVertical: 9, fontSize: fontSize.base },
-  card: { borderWidth: 1, borderColor: colors.borderLight, borderRadius: radius.lg, padding: spacing.md + 2 },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: radius.xl,
+    overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black || '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.08,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
+  },
+  coverWrap: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: colors.disabled,
+  },
+  coverImg: { width: '100%', height: '100%' },
+  coverEmpty: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primaryTint || colors.disabled,
+    gap: spacing.xs || 2,
+  },
+  coverEmptyText: {
+    fontSize: fontSize.xs,
+    color: colors.textFaint,
+    fontWeight: fontWeight.semibold,
+    marginTop: 2,
+  },
+  extrasBadge: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    right: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.65)',
+    paddingVertical: 5,
+    paddingHorizontal: 9,
+    borderRadius: radius.pill,
+  },
+  extrasBadgeText: { color: colors.white, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  cardBody: {
+    padding: spacing.md + 2,
+    gap: 5,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    alignItems: 'center',
+    marginBottom: 2,
+  },
   chip: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, backgroundColor: colors.primaryTint, color: colors.primaryDark, paddingVertical: 3, paddingHorizontal: spacing.sm + 1, borderRadius: radius.pill, alignSelf: 'flex-start' },
   chipMine: { backgroundColor: colors.accentTint, color: colors.accent },
-  cardTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, marginTop: spacing.sm, marginBottom: 4 },
-  cardMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
-  cardOwner: { fontSize: fontSize.sm, color: colors.textFaint, marginTop: 4 },
+  cardTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 1,
+  },
+  cardMetaText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    flex: 1,
+  },
+  footerRow: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.borderLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  ownerWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  cardOwner: {
+    fontSize: fontSize.sm,
+    color: colors.textFaint,
+    flex: 1,
+  },
   empty: { textAlign: 'center', color: colors.textFaint, marginTop: 40 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
   modalCard: { backgroundColor: colors.background, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.xl, paddingBottom: 32, maxHeight: '85%' },
