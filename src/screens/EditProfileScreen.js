@@ -67,7 +67,9 @@ export default function EditProfileScreen({ navigation }) {
       mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: vagas,
-      quality: 0.6,
+      quality: 0.55,
+      maxWidth: 1280,
+      maxHeight: 1280,
     });
     if (resultado.canceled) return;
 
@@ -124,12 +126,33 @@ export default function EditProfileScreen({ navigation }) {
       for (let i = 0; i < photos.length; i++) {
         const item = photos[i];
         if (item.isNew) {
-          const resposta = await fetch(item.uri);
-          const blob = await resposta.blob();
-          const path = `profile-photos/${myUid}/${Date.now()}-${i}.jpg`;
+          console.log(`[EditProfile] foto ${i + 1}/${photos.length}: uri ok? ${!!item.uri}`);
+          let blob;
+          try {
+            const resposta = await fetch(item.uri);
+            blob = await resposta.blob();
+            console.log(`[EditProfile] foto ${i + 1}: blob carregado (${blob.size} bytes)`);
+          } catch (e) {
+            console.error(`[EditProfile] foto ${i + 1}: ERRO ao carregar blob`, e);
+            throw e;
+          }
+          const path = `profilePhotos/${myUid}/${Date.now()}-${i}.jpg`;
           const storageRef = ref(storage, path);
-          await uploadBytes(storageRef, blob);
-          const url = await getDownloadURL(storageRef);
+          console.log(`[EditProfile] foto ${i + 1}: uploadBytes -> ${path}`);
+          try {
+            await uploadBytes(storageRef, blob);
+          } catch (e) {
+            console.error(`[EditProfile] foto ${i + 1}: ERRO no uploadBytes`, e?.code || '', e?.message || '', e?.serverResponse || '');
+            throw e;
+          }
+          let url;
+          try {
+            url = await getDownloadURL(storageRef);
+            console.log(`[EditProfile] foto ${i + 1}: getDownloadURL ok`);
+          } catch (e) {
+            console.error(`[EditProfile] foto ${i + 1}: ERRO no getDownloadURL`, e);
+            throw e;
+          }
           finais.push({ url, path, _id: item.id });
         } else {
           finais.push({ url: item.url, path: item.path, _id: item.id });
@@ -158,7 +181,12 @@ export default function EditProfileScreen({ navigation }) {
 
       navigation.goBack();
     } catch (e) {
-      Alert.alert('Erro', 'Não foi possível salvar agora. Tente de novo.');
+      console.error('[EditProfile] handleSalvar falhou:', e);
+      const msg = e?.message || String(e || '');
+      Alert.alert(
+        'Erro',
+        'Não foi possível salvar agora. Tente de novo.\n\nDetalhe: ' + (msg ? msg.slice(0, 120) : 'sem detalhe')
+      );
     } finally {
       setSaving(false);
     }
