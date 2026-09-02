@@ -6,7 +6,7 @@ export default function Button({ label, onPress, variant = 'primary', disabled, 
   const variantStyle = VARIANTS[variant] || VARIANTS.primary;
   return (
     <TouchableOpacity
-      style={[styles.base, variantStyle.button, disabled && styles.disabled, style]}
+      style={[styles.base, variantStyle.button, (disabled || loading) && styles.disabled, style]}
       onPress={onPress}
       disabled={disabled || loading}
     >
@@ -29,5 +29,5 @@ const VARIANTS = {
 const styles = StyleSheet.create({
   base: { padding: spacing.md + 2, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   text: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
-  disabled: { backgroundColor: colors.disabled },
+  disabled: { opacity: 0.5 },
 });

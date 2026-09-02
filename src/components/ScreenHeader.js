@@ -37,7 +37,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     textAlign: 'center',
-    zIndex: -1,
+    zIndex: 1,
     fontWeight: fontWeight.bold,
     fontSize: fontSize.xl,
     color: colors.text,

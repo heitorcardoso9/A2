@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, Scro
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '../services/firebase';
 import ScreenHeader from '../components/ScreenHeader';
@@ -100,6 +100,23 @@ export default function EditProfileScreen({ navigation }) {
     if (usernameLimpo && !/^[\p{L}0-9_ ]{3,20}$/u.test(usernameLimpo)) {
       Alert.alert('Nome de usuário inválido', 'Use de 3 a 20 letras, números, espaço ou "_".');
       return;
+    }
+    if (usernameLimpo) {
+      try {
+        const q = query(
+          collection(db, 'users'),
+          where('username', '==', usernameLimpo)
+        );
+        const snap = await getDocs(q);
+        const conflito = snap.docs.some((d) => d.id !== myUid);
+        if (conflito) {
+          Alert.alert('Nome em uso', 'Esse nome de usuário já foi escolhido por outra pessoa. Tente outro!');
+          return;
+        }
+      } catch (e) {
+        Alert.alert('Ops', 'Não foi possível verificar o nome de usuário agora. Tente de novo.');
+        return;
+      }
     }
     setSaving(true);
     try {

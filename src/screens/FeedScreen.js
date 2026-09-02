@@ -9,6 +9,7 @@ import UserName from '../components/UserName';
 import SearchablePickerModal from '../components/SearchablePickerModal';
 import Button from '../components/Button';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
+import { useIBGEEstados, useIBGECidades } from '../hooks/useIBGELocations';
 
 LocaleConfig.locales['pt-br'] = {
   monthNames: ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'],
@@ -61,13 +62,13 @@ export default function FeedScreen({ navigation }) {
   const [dataInicio, setDataInicio] = useState(null);
   const [dataFim, setDataFim] = useState(null);
 
-  const [estados, setEstados] = useState([]);
-  const [cidades, setCidades] = useState([]);
   const [ufFiltro, setUfFiltro] = useState('');
   const [cidadeFiltro, setCidadeFiltro] = useState('');
-  const [carregandoCidades, setCarregandoCidades] = useState(false);
   const [showEstadoModal, setShowEstadoModal] = useState(false);
   const [showCidadeModal, setShowCidadeModal] = useState(false);
+
+  const estados = useIBGEEstados();
+  const { cidades, carregando: carregandoCidades } = useIBGECidades(ufFiltro);
 
   useEffect(() => {
     const q = query(collection(db, 'activities'), orderBy('createdAt', 'desc'));
@@ -77,26 +78,6 @@ export default function FeedScreen({ navigation }) {
     });
     return unsubscribe;
   }, []);
-
-  useEffect(() => {
-    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
-      .then((r) => r.json())
-      .then(setEstados)
-      .catch(() => { });
-  }, []);
-
-  useEffect(() => {
-    if (!ufFiltro) {
-      setCidades([]);
-      return;
-    }
-    setCarregandoCidades(true);
-    fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${ufFiltro}/municipios`)
-      .then((r) => r.json())
-      .then((lista) => setCidades(lista.map((m) => m.nome).sort((a, b) => a.localeCompare(b))))
-      .catch(() => setCidades([]))
-      .finally(() => setCarregandoCidades(false));
-  }, [ufFiltro]);
 
   function onSelectEstadoFiltro(sigla) {
     setUfFiltro(sigla);
@@ -159,10 +140,11 @@ export default function FeedScreen({ navigation }) {
       }
       if (ufFiltro && a.uf !== ufFiltro) return false;
       if (cidadeFiltro && a.cidade !== cidadeFiltro) return false;
-      if (filtro === 'Outros' && busca.trim()) {
+      if (busca.trim()) {
         const tituloOk = normalizar(a.title || '').includes(termo);
         const descOk = normalizar(a.desc || '').includes(termo);
-        if (!tituloOk && !descOk) return false;
+        const localOk = normalizar(a.local || '').includes(termo);
+        if (!tituloOk && !descOk && !localOk) return false;
       }
       return true;
     });
@@ -208,17 +190,15 @@ export default function FeedScreen({ navigation }) {
         </ScrollView>
       </View>
 
-      {filtro === 'Outros' && (
-        <View style={styles.searchWrap}>
-          <Ionicons name="search" size={16} color={colors.textFaint} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar em Outros..."
-            value={busca}
-            onChangeText={setBusca}
-          />
-        </View>
-      )}
+      <View style={styles.searchWrap}>
+        <Ionicons name="search" size={16} color={colors.textFaint} />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Buscar atividades..."
+          value={busca}
+          onChangeText={setBusca}
+        />
+      </View>
 
       <FlatList
         style={{ flex: 1 }}

@@ -8,6 +8,7 @@ import SearchablePickerModal from '../components/SearchablePickerModal';
 import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
+import { useIBGEEstados, useIBGECidades } from '../hooks/useIBGELocations';
 
 const TIPOS = ['Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
 
@@ -28,23 +29,16 @@ export default function CreateActivityScreen({ navigation, route }) {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
-  const [estados, setEstados] = useState([]);
-  const [cidades, setCidades] = useState([]);
   const [uf, setUf] = useState('');
   const [cidade, setCidade] = useState('');
-  const [carregandoCidades, setCarregandoCidades] = useState(false);
   const [pendingCidade, setPendingCidade] = useState(null);
   const [showEstadoModal, setShowEstadoModal] = useState(false);
   const [showCidadeModal, setShowCidadeModal] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    fetch('https://servicodados.ibge.gov.br/api/v1/localidades/estados?orderBy=nome')
-      .then((r) => r.json())
-      .then(setEstados)
-      .catch(() => {});
-  }, []);
+  const estados = useIBGEEstados();
+  const { cidades, carregando: carregandoCidades } = useIBGECidades(uf);
 
   useEffect(() => {
     if (isEditing) {
@@ -61,19 +55,6 @@ export default function CreateActivityScreen({ navigation, route }) {
       }
     }
   }, []);
-
-  useEffect(() => {
-    if (!uf) {
-      setCidades([]);
-      return;
-    }
-    setCarregandoCidades(true);
-    fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`)
-      .then((r) => r.json())
-      .then((lista) => setCidades(lista.map((m) => m.nome).sort((a, b) => a.localeCompare(b))))
-      .catch(() => setCidades([]))
-      .finally(() => setCarregandoCidades(false));
-  }, [uf]);
 
   useEffect(() => {
     if (pendingCidade && cidades.includes(pendingCidade)) {
@@ -125,6 +106,15 @@ export default function CreateActivityScreen({ navigation, route }) {
     resetForm();
   }
 
+  function ehDataHoje(d) {
+    const hoje = new Date();
+    return (
+      d.getFullYear() === hoje.getFullYear() &&
+      d.getMonth() === hoje.getMonth() &&
+      d.getDate() === hoje.getDate()
+    );
+  }
+
   async function handlePublicar() {
     if (!titulo.trim()) {
       Alert.alert('Ops', 'Preencha o título da atividade.');
@@ -132,6 +122,10 @@ export default function CreateActivityScreen({ navigation, route }) {
     }
     if (!uf || !cidade) {
       Alert.alert('Ops', 'Selecione o estado e a cidade.');
+      return;
+    }
+    if (dataHora.getTime() < Date.now()) {
+      Alert.alert('Ops', 'O horário da atividade já passou! Escolha uma data e hora futuras.');
       return;
     }
     setLoading(true);
@@ -217,7 +211,13 @@ export default function CreateActivityScreen({ navigation, route }) {
             <Text style={styles.inputText}>{formatarHora(dataHora)}</Text>
           </TouchableOpacity>
           {showTimePicker && (
-            <DateTimePicker value={dataHora} mode="time" display="spinner" onChange={onChangeTime} />
+            <DateTimePicker
+              value={dataHora}
+              mode="time"
+              display="spinner"
+              minimumDate={ehDataHoje(dataHora) ? new Date() : undefined}
+              onChange={onChangeTime}
+            />
           )}
           {Platform.OS === 'ios' && showTimePicker && (
             <TouchableOpacity style={styles.doneBtn} onPress={() => setShowTimePicker(false)}>

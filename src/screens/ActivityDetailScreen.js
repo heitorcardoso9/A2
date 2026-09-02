@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
@@ -40,7 +40,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
       const snap = await getDocs(q);
       setSent(!snap.empty);
     } catch (e) {
-      // se der erro na checagem, deixa o botão habilitado normalmente
+      // Falha silenciosa na checagem é aceitável: deixa o botão normal
     } finally {
       setChecking(false);
     }
@@ -62,7 +62,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
       });
       setSent(true);
     } catch (e) {
-      // poderia mostrar um alerta de erro aqui
+      Alert.alert('Ops', 'Não foi possível enviar seu interesse agora. Verifique sua conexão e tente de novo.');
     } finally {
       setSending(false);
     }
@@ -72,7 +72,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
     try {
       await updateDoc(doc(db, 'participations', participationId), { status: novoStatus });
     } catch (e) {
-      // poderia mostrar um alerta de erro aqui
+      Alert.alert('Ops', 'Não foi possível atualizar o status agora. Tente de novo.');
     }
   }
 

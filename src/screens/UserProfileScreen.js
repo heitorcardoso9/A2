@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, FlatList, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import PhotoViewerModal from '../components/PhotoViewerModal';
 import ScreenHeader from '../components/ScreenHeader';
@@ -16,11 +16,18 @@ export default function UserProfileScreen({ navigation, route }) {
   const [viewerIndex, setViewerIndex] = useState(0);
 
   useEffect(() => {
-    (async () => {
-      const snap = await getDoc(doc(db, 'users', userId));
-      if (snap.exists()) setProfile(snap.data());
+    setLoading(true);
+    const unsubscribe = onSnapshot(doc(db, 'users', userId), (snap) => {
+      if (snap.exists()) {
+        setProfile(snap.data());
+      } else {
+        setProfile(null);
+      }
       setLoading(false);
-    })();
+    }, (err) => {
+      setLoading(false);
+    });
+    return unsubscribe;
   }, [userId]);
 
   if (loading) {

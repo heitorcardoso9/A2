@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, Image } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { signOut } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, where, getDoc, deleteDoc, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, getDoc, deleteDoc, getDocs, orderBy } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import PhotoViewerModal from '../components/PhotoViewerModal';
 import Button from '../components/Button';
@@ -23,9 +23,18 @@ export default function ProfileScreen({ navigation }) {
     const unsubUser = onSnapshot(doc(db, 'users', myUid), (snap) => {
       if (snap.exists()) setProfile(snap.data());
     });
-    const q = query(collection(db, 'activities'), where('ownerId', '==', myUid));
+    const q = query(
+      collection(db, 'activities'),
+      where('ownerId', '==', myUid)
+    );
     const unsubActivities = onSnapshot(q, (snapshot) => {
-      setMinhasAtividades(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
+      const itens = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      itens.sort((a, b) => {
+        const ta = (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate().getTime() : a.createdAt) || 0;
+        const tb = (b.createdAt && b.createdAt.toDate ? b.createdAt.toDate().getTime() : b.createdAt) || 0;
+        return tb - ta;
+      });
+      setMinhasAtividades(itens);
     });
     return () => {
       unsubUser();
@@ -34,23 +43,58 @@ export default function ProfileScreen({ navigation }) {
   }, []);
 
   useEffect(() => {
-    const q = query(collection(db, 'participations'), where('userId', '==', myUid));
-    const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const itens = await Promise.all(
-        snapshot.docs.map(async (d) => {
-          const participacao = d.data();
-          const activitySnap = await getDoc(doc(db, 'activities', participacao.activityId));
-          return {
-            id: d.id,
-            status: participacao.status,
-            activity: activitySnap.exists() ? { id: activitySnap.id, ...activitySnap.data() } : null,
-          };
-        })
-      );
-      setParticipacoes(itens.filter((p) => p.activity));
+    const q = query(
+      collection(db, 'participations'),
+      where('userId', '==', myUid)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const itens = snapshot.docs.map((d) => {
+        const data = d.data();
+        const activityPreview = {
+          id: data.activityId,
+          title: data.activityTitle || 'Atividade removida',
+          date: data.activityDate || '',
+          local: data.activityLocal || '',
+          ownerId: data.activityOwnerId,
+        };
+        return {
+          id: d.id,
+          status: data.status,
+          activityId: data.activityId,
+          activity: activityPreview,
+          _activityLoaded: false,
+          _createdAt: data.createdAt || 0,
+        };
+      });
+      itens.sort((a, b) => {
+        const ta = (a._createdAt && a._createdAt.toDate ? a._createdAt.toDate().getTime() : a._createdAt) || 0;
+        const tb = (b._createdAt && b._createdAt.toDate ? b._createdAt.toDate().getTime() : b._createdAt) || 0;
+        return tb - ta;
+      });
+      setParticipacoes(itens);
     });
     return unsubscribe;
   }, []);
+
+  const activityCache = new Map();
+  async function abrirParticipacao(p) {
+    try {
+      if (activityCache.has(p.activityId)) {
+        navigation.navigate('ActivityDetail', { activity: activityCache.get(p.activityId), mine: false });
+        return;
+      }
+      const snap = await getDoc(doc(db, 'activities', p.activityId));
+      if (snap.exists()) {
+        const full = { id: snap.id, ...snap.data() };
+        activityCache.set(p.activityId, full);
+        navigation.navigate('ActivityDetail', { activity: full, mine: full.ownerId === myUid });
+      } else {
+        Alert.alert('Ops', 'Essa atividade não existe mais.');
+      }
+    } catch (e) {
+      Alert.alert('Erro', 'Não foi possível abrir a atividade.');
+    }
+  }
 
   function handleSair() {
     Alert.alert('Sair', 'Tem certeza que quer sair da sua conta?', [
@@ -156,7 +200,7 @@ export default function ProfileScreen({ navigation }) {
               <TouchableOpacity
                 key={p.id}
                 style={styles.activityRow}
-                onPress={() => navigation.navigate('ActivityDetail', { activity: p.activity, mine: p.activity.ownerId === myUid })}
+                onPress={() => abrirParticipacao(p)}
               >
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>

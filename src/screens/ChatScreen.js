@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import UserName from '../components/UserName';
 import UserAvatar from '../components/UserAvatar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,7 +26,6 @@ export default function ChatScreen({ navigation, route }) {
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMessages(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
     });
     return unsubscribe;
   }, []);
@@ -53,7 +52,7 @@ export default function ChatScreen({ navigation, route }) {
         { merge: true }
       );
     } catch (e) {
-      // poderia mostrar um alerta de erro aqui
+      Alert.alert('Ops', 'Não foi possível enviar a mensagem. Verifique sua conexão e tente de novo.');
     }
   }
 
