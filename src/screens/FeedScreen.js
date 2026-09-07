@@ -3,7 +3,7 @@ import { View, Text, FlatList, ScrollView, TextInput, TouchableOpacity, StyleShe
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserName from '../components/UserName';
 import UserAvatar from '../components/UserAvatar';
@@ -58,6 +58,7 @@ function fromDateString(s) {
 
 export default function FeedScreen({ navigation }) {
   const [activities, setActivities] = useState([]);
+  const [participations, setParticipations] = useState([]);
   const [filtro, setFiltro] = useState('Todos');
   const [busca, setBusca] = useState('');
 
@@ -81,6 +82,30 @@ export default function FeedScreen({ navigation }) {
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    const qP = query(collection(db, 'participations'), where('status', 'in', ['confirmado', 'espera']));
+    const unsub = onSnapshot(qP, (snap) => {
+      setParticipations(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    });
+    return unsub;
+  }, []);
+
+  const confirmadosPorAtividade = useMemo(() => {
+    const m = new Map();
+    for (const p of participations) {
+      if (p.status === 'confirmado') m.set(p.activityId, (m.get(p.activityId) || 0) + 1);
+    }
+    return m;
+  }, [participations]);
+
+  const esperaPorAtividade = useMemo(() => {
+    const m = new Map();
+    for (const p of participations) {
+      if (p.status === 'espera') m.set(p.activityId, (m.get(p.activityId) || 0) + 1);
+    }
+    return m;
+  }, [participations]);
 
   function onSelectEstadoFiltro(sigla) {
     setUfFiltro(sigla);
@@ -216,28 +241,69 @@ export default function FeedScreen({ navigation }) {
               ? (typeof item.photoUrls[0] === 'string' ? item.photoUrls[0] : item.photoUrls[0].url)
               : null;
           const extrasCount = (item.photoUrls?.length || 0) - 1;
+          const maxP = item.maxParticipants ?? null;
+          const qtdConf = confirmadosPorAtividade.get(item.id) || 0;
+          const qtdEspera = esperaPorAtividade.get(item.id) || 0;
+          const estaLotado = maxP != null && qtdConf >= maxP;
+          const restantes = maxP == null ? Infinity : Math.max(0, maxP - qtdConf);
+          const temBadgeVagas = maxP != null;
+
+          let badgeVagasLabel = null;
+          let badgeVagasVariant = 'info'; // 'danger' | 'warning' | 'info'
+          if (maxP != null) {
+            if (estaLotado) {
+              badgeVagasLabel = qtdEspera > 0 ? `🔴 Lotado · ${qtdEspera} na fila` : '🔴 Lotado';
+              badgeVagasVariant = 'danger';
+            } else if (restantes === 1) {
+              badgeVagasLabel = '⚡ Última vaga!';
+              badgeVagasVariant = 'warning';
+            } else if (restantes <= 3) {
+              badgeVagasLabel = `⚡ ${restantes} vagas restantes`;
+              badgeVagasVariant = 'warning';
+            } else {
+              badgeVagasLabel = `👥 ${qtdConf}/${maxP}`;
+              badgeVagasVariant = 'info';
+            }
+          }
+
           return (
             <TouchableOpacity
               style={styles.card}
               activeOpacity={0.82}
               onPress={() => navigation.navigate('ActivityDetail', { activity: item, mine })}
             >
-              {coverUrl ? (
-                <View style={styles.coverWrap}>
+              <View style={styles.coverWrap}>
+                {coverUrl ? (
                   <Image source={{ uri: coverUrl }} style={styles.coverImg} resizeMode="cover" />
-                  {extrasCount > 0 && (
-                    <View style={styles.extrasBadge}>
-                      <Ionicons name="images-outline" size={13} color={colors.white} />
-                      <Text style={styles.extrasBadgeText}>+{extrasCount}</Text>
-                    </View>
-                  )}
-                </View>
-              ) : (
-                <View style={[styles.coverWrap, styles.coverEmpty]}>
-                  <Ionicons name="calendar-outline" size={38} color={colors.textFaint} />
-                  <Text style={styles.coverEmptyText}>Sem foto</Text>
-                </View>
-              )}
+                ) : (
+                  <View style={styles.coverEmpty}>
+                    <Ionicons name="calendar-outline" size={38} color={colors.textFaint} />
+                    <Text style={styles.coverEmptyText}>Sem foto</Text>
+                  </View>
+                )}
+
+                {temBadgeVagas && (
+                  <View
+                    style={[
+                      styles.vagasBadge,
+                      badgeVagasVariant === 'danger' && styles.vagasBadgeDanger,
+                      badgeVagasVariant === 'warning' && styles.vagasBadgeWarning,
+                      badgeVagasVariant === 'info' && styles.vagasBadgeInfo,
+                    ]}
+                  >
+                    <Text style={styles.vagasBadgeText} numberOfLines={1}>
+                      {badgeVagasLabel}
+                    </Text>
+                  </View>
+                )}
+
+                {extrasCount > 0 && (
+                  <View style={styles.extrasBadge}>
+                    <Ionicons name="images-outline" size={13} color={colors.white} />
+                    <Text style={styles.extrasBadgeText}>+{extrasCount}</Text>
+                  </View>
+                )}
+              </View>
 
               <View style={styles.cardBody}>
                 <View style={styles.chipsRow}>
@@ -384,9 +450,12 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 16 / 9,
     backgroundColor: colors.disabled,
+    position: 'relative',
   },
   coverImg: { width: '100%', height: '100%' },
   coverEmpty: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primaryTint || colors.disabled,
@@ -398,6 +467,24 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     marginTop: 2,
   },
+  vagasBadge: {
+    position: 'absolute',
+    top: spacing.sm,
+    left: spacing.sm,
+    paddingVertical: 5,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
+    shadowColor: colors.black,
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    elevation: 1,
+    maxWidth: '75%',
+  },
+  vagasBadgeDanger: { backgroundColor: colors.danger || '#ef4444' },
+  vagasBadgeWarning: { backgroundColor: colors.accent || '#f59e0b' },
+  vagasBadgeInfo: { backgroundColor: 'rgba(0,0,0,0.68)' },
+  vagasBadgeText: { color: colors.white, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
   extrasBadge: {
     position: 'absolute',
     bottom: spacing.sm,

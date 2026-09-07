@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, ActivityIndicator, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import * as NavigationBar from 'expo-navigation-bar';
+import { NavigationBar } from 'expo-navigation-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './src/services/firebase';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -12,7 +12,9 @@ export default function App() {
 
   useEffect(() => {
     if (Platform.OS === 'android') {
-      NavigationBar.setButtonStyleAsync('dark');
+      try {
+        NavigationBar.setStyle('dark');
+      } catch (_) {}
     }
   }, []);
 

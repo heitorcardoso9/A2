@@ -31,6 +31,7 @@ export default function CreateActivityScreen({ navigation, route }) {
   const [titulo, setTitulo] = useState('');
   const [desc, setDesc] = useState('');
   const [dataHora, setDataHora] = useState(horarioPadrao);
+  const [vagas, setVagas] = useState('0');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
 
@@ -53,6 +54,7 @@ export default function CreateActivityScreen({ navigation, route }) {
       setTipo(activityParam.type || TIPOS[0]);
       setTitulo(activityParam.title || '');
       setDesc(activityParam.desc || '');
+      setVagas(activityParam.maxParticipants != null ? String(activityParam.maxParticipants) : '0');
       if (activityParam.dateTime) {
         const d = activityParam.dateTime.toDate ? activityParam.dateTime.toDate() : new Date(activityParam.dateTime);
         setDataHora(d);
@@ -94,20 +96,36 @@ export default function CreateActivityScreen({ navigation, route }) {
     return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   }
 
-  function onChangeDate(event, selected) {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (event.type === 'dismissed' || !selected) return;
+  function onValueChangeDate(_, selected) {
+    if (Platform.OS === 'ios') {
+      setShowDatePicker(true);
+    } else {
+      setShowDatePicker(false);
+    }
+    if (!selected) return;
     const nova = new Date(dataHora);
     nova.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
     setDataHora(nova);
   }
 
-  function onChangeTime(event, selected) {
-    setShowTimePicker(Platform.OS === 'ios');
-    if (event.type === 'dismissed' || !selected) return;
+  function onDismissDate() {
+    setShowDatePicker(false);
+  }
+
+  function onValueChangeTime(_, selected) {
+    if (Platform.OS === 'ios') {
+      setShowTimePicker(true);
+    } else {
+      setShowTimePicker(false);
+    }
+    if (!selected) return;
     const nova = new Date(dataHora);
     nova.setHours(selected.getHours(), selected.getMinutes());
     setDataHora(nova);
+  }
+
+  function onDismissTime() {
+    setShowTimePicker(false);
   }
 
   function resetForm() {
@@ -117,6 +135,7 @@ export default function CreateActivityScreen({ navigation, route }) {
     setDataHora(horarioPadrao());
     setUf('');
     setCidade('');
+    setVagas('0');
   }
 
   function handleCancelar() {
@@ -178,6 +197,12 @@ export default function CreateActivityScreen({ navigation, route }) {
       Alert.alert('Ops', 'O horário da atividade já passou! Escolha uma data e hora futuras.');
       return;
     }
+    const vagasNum = Number(String(vagas || '0').replace(/[^0-9]/g, ''));
+    if (isNaN(vagasNum) || vagasNum < 0) {
+      Alert.alert('Ops', 'Número de vagas inválido. Deixe 0 para ilimitadas.');
+      return;
+    }
+    const maxParticipants = vagasNum === 0 ? null : vagasNum;
     setLoading(true);
     try {
       const dadosBase = {
@@ -189,6 +214,7 @@ export default function CreateActivityScreen({ navigation, route }) {
         uf,
         cidade,
         desc: desc.trim() || 'Sem descrição.',
+        maxParticipants,
       };
 
       async function uploadAllPhotosFor(activityId) {
@@ -316,7 +342,8 @@ export default function CreateActivityScreen({ navigation, route }) {
               mode="date"
               display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
               minimumDate={new Date()}
-              onChange={onChangeDate}
+              onValueChange={onValueChangeDate}
+              onDismiss={onDismissDate}
             />
           )}
           {Platform.OS === 'ios' && showDatePicker && (
@@ -335,7 +362,8 @@ export default function CreateActivityScreen({ navigation, route }) {
               mode="time"
               display="spinner"
               minimumDate={ehDataHoje(dataHora) ? new Date() : undefined}
-              onChange={onChangeTime}
+              onValueChange={onValueChangeTime}
+              onDismiss={onDismissTime}
             />
           )}
           {Platform.OS === 'ios' && showTimePicker && (
@@ -370,6 +398,17 @@ export default function CreateActivityScreen({ navigation, route }) {
             maxLength={500}
           />
           <Text style={styles.counter}>{desc.length}/500</Text>
+
+          <Text style={styles.label}>Vagas</Text>
+          <TextInput
+            style={styles.input}
+            value={vagas}
+            onChangeText={(t) => setVagas(t.replace(/[^0-9]/g, '').slice(0, 4))}
+            placeholder="0 = ilimitadas"
+            placeholderTextColor={colors.textFaint}
+            keyboardType="number-pad"
+          />
+          <Text style={styles.hint}>Deixe 0 para permitir quantas pessoas quiserem.</Text>
 
           <Text style={styles.label}>Fotos ({photos.length}/{MAX_FOTOS_ATIVIDADE})</Text>
           <Text style={styles.hint}>Adicione até {MAX_FOTOS_ATIVIDADE} fotos para ilustrar sua atividade.</Text>

@@ -127,11 +127,16 @@ export default function ProfileScreen({ navigation }) {
   }
 
   function labelStatus(status) {
-    const mapa = { pendente: 'Aguardando resposta', confirmado: 'Confirmado', recusado: 'Recusado' };
+    const mapa = {
+      pendente: 'Aguardando resposta',
+      confirmado: 'Confirmado',
+      recusado: 'Recusado',
+      espera: 'Na lista de espera',
+    };
     return mapa[status] || status;
   }
 
-  const STATUS_STYLE_KEY = { pendente: 'statusPendente', confirmado: 'statusConfirmado', recusado: 'statusRecusado' };
+  const STATUS_STYLE_KEY = { pendente: 'statusPendente', confirmado: 'statusConfirmado', recusado: 'statusRecusado', espera: 'statusEspera' };
 
   const iniciais = auth.currentUser.email.slice(0, 2).toUpperCase();
   const outrasFotos = (profile.photos || []).filter((p) => p.url !== profile.profilePhotoUrl);
@@ -273,4 +278,5 @@ const styles = StyleSheet.create({
   statusPendente: { backgroundColor: colors.warningBg, color: colors.warning },
   statusConfirmado: { backgroundColor: colors.successBg, color: colors.success },
   statusRecusado: { backgroundColor: colors.disabled, color: colors.textSecondary },
+  statusEspera: { backgroundColor: colors.infoBg || colors.primaryTint, color: colors.info || colors.primary },
 });
