@@ -311,6 +311,15 @@ export default function ActivityDetailScreen({ navigation, route }) {
                       <Ionicons name="person-remove-outline" size={16} color={colors.danger} />
                     </TouchableOpacity>
                   )}
+                  {item.status === 'recusado' && (
+                    <TouchableOpacity
+                      style={styles.iconBtnOk}
+                      onPress={() => atualizarStatus(item.id, 'pendente')}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="arrow-undo-outline" size={16} color={colors.primary} />
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity
                     style={styles.chatBtn}
                     onPress={() => navigation.navigate('Chat', { withUserId: item.userId, withUserEmail: item.userEmail, activityTitle: activity.title })}

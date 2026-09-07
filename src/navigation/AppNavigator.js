@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -30,8 +31,12 @@ function MainTabs() {
         headerShown: false,
         tabBarActiveTintColor: '#0E5C46',
         tabBarInactiveTintColor: '#8B958F',
+        tabBarPressOpacity: 1,
+        tabBarPressColor: 'transparent',
         tabBarIcon: ({ color, size }) => (
-          <Ionicons name={TAB_ICONS[route.name]} size={size} color={color} />
+          <View pointerEvents="none">
+            <Ionicons name={TAB_ICONS[route.name]} size={size} color={color} />
+          </View>
         ),
       })}
     >
