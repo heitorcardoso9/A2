@@ -77,7 +77,7 @@ export default function UserProfileScreen({ navigation, route }) {
             data={outrasFotos}
             horizontal
             keyExtractor={(item) => item.path}
-            contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.lg }}
+            contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.lg, flexGrow: 1, justifyContent: 'center' }}
             showsHorizontalScrollIndicator={false}
             renderItem={({ item, index }) => (
               <TouchableOpacity onPress={() => abrirFoto(index + (profile.profilePhotoUrl ? 1 : 0))}>

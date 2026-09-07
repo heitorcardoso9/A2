@@ -256,8 +256,8 @@ export default function ProfileScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   head: { alignItems: 'center', marginBottom: spacing.md + 2 },
-  avatar: { width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
-  avatarImg: { width: 64, height: 64, borderRadius: 32, marginBottom: spacing.sm },
+  avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
+  avatarImg: { width: 100, height: 100, borderRadius: 50, marginBottom: spacing.sm },
   avatarText: { fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: colors.primaryDark },
   username: { fontWeight: fontWeight.bold, fontSize: fontSize.xl, marginTop: 2 },
   email: { fontSize: fontSize.sm, color: colors.textFaint, marginTop: 1 },
