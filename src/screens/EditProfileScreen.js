@@ -6,7 +6,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '../services/firebase';
-import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
@@ -196,7 +195,6 @@ export default function EditProfileScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScreenHeader title="Editar perfil" onBack={() => navigation.goBack()} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
           <Text style={styles.label}>Fotos ({photos.length}/{MAX_FOTOS})</Text>

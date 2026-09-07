@@ -30,6 +30,12 @@ export default function ActivityDetailScreen({ navigation, route }) {
   const porcentagemOcupada = maxParticipants ? Math.min(100, (qtdConfirmados / maxParticipants) * 100) : 0;
 
   useEffect(() => {
+    if (activity?.title) {
+      navigation.setOptions({ headerTitle: activity.title });
+    }
+  }, [activity?.title]);
+
+  useEffect(() => {
     if (mine) return;
     checkInterest();
   }, []);
@@ -163,10 +169,6 @@ export default function ActivityDetailScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginBottom: spacing.xxl + 2 }}>
-          <Text style={styles.back}>‹ Voltar</Text>
-        </TouchableOpacity>
-
         <Text style={styles.chip}>{activity.type}</Text>
         <Text style={styles.title}>{activity.title}</Text>
         <Text style={styles.meta}>📅 {activity.date}</Text>
@@ -378,7 +380,6 @@ export default function ActivityDetailScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  back: { color: colors.primary, fontWeight: fontWeight.bold, fontSize: fontSize.xl },
   chip: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, backgroundColor: colors.primaryTint, color: colors.primaryDark, paddingVertical: 3, paddingHorizontal: spacing.sm + 1, borderRadius: radius.pill, alignSelf: 'flex-start' },
   title: { fontSize: fontSize.heading, fontWeight: fontWeight.extrabold, marginTop: spacing.md - 2, marginBottom: spacing.md - 2 },
   meta: { fontSize: fontSize.md, color: colors.textSecondary, marginBottom: spacing.sm },

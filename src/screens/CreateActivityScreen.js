@@ -313,11 +313,9 @@ export default function CreateActivityScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScreenHeader
-          title={isEditing ? 'Editar atividade' : 'Criar atividade'}
-          onBack={isEditing ? () => navigation.goBack() : null}
-        />
-
+        {!isEditing && (
+          <ScreenHeader title="Criar atividade" />
+        )}
         <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
           <Text style={styles.label}>Tipo</Text>
           <View style={styles.chipRow}>

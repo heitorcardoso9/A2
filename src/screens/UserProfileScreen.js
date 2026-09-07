@@ -4,7 +4,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import PhotoViewerModal from '../components/PhotoViewerModal';
-import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
@@ -41,7 +40,6 @@ export default function UserProfileScreen({ navigation, route }) {
   if (!profile) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <ScreenHeader onBack={() => navigation.goBack()} />
         <Text style={styles.empty}>Não foi possível encontrar esse perfil.</Text>
       </SafeAreaView>
     );
@@ -60,7 +58,6 @@ export default function UserProfileScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <ScreenHeader onBack={() => navigation.goBack()} />
       <ScrollView contentContainerStyle={{ padding: spacing.xl, flexGrow: 1 }}>
         <View style={styles.head}>
           <TouchableOpacity onPress={() => allPhotoUrls.length > 0 && abrirFoto(0)}>

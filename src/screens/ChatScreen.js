@@ -62,10 +62,7 @@ export default function ChatScreen({ navigation, route }) {
       behavior="padding"
       keyboardVerticalOffset={Platform.OS === 'ios' ? bottomInset : 0}
     >
-      <View style={[styles.header, { paddingTop: topInset + spacing.md }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>‹ Voltar</Text>
-        </TouchableOpacity>
+      <View style={styles.header}>
         <TouchableOpacity style={styles.headerInfo} onPress={() => navigation.navigate('UserProfile', { userId: withUserId })}>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.name}><UserName userId={withUserId} fallbackEmail={withUserEmail} /></Text>
@@ -111,8 +108,16 @@ export default function ChatScreen({ navigation, route }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.backgroundAlt },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingBottom: spacing.md, backgroundColor: colors.background, borderBottomWidth: 1, borderBottomColor: colors.borderLight },
-  back: { color: colors.primary, fontWeight: fontWeight.bold, fontSize: fontSize.xl },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    backgroundColor: colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
   headerInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   name: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
   activity: { fontSize: fontSize.sm, color: colors.textSecondary },

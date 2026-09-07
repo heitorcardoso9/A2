@@ -54,11 +54,19 @@ export default function AppNavigator({ isLoggedIn }) {
       {isLoggedIn ? (
         <>
           <Stack.Screen name="Main" component={MainTabs} />
-          <Stack.Screen name="ActivityDetail" component={ActivityDetailScreen} />
-          <Stack.Screen name="Chat" component={ChatScreen} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-          <Stack.Screen name="UserProfile" component={UserProfileScreen} />
-          <Stack.Screen name="EditActivity" component={CreateActivityScreen} />
+          <Stack.Screen
+            name="ActivityDetail"
+            component={ActivityDetailScreen}
+            options={{ headerShown: true, headerBackTitle: 'Voltar', title: 'Atividade', headerTitleAlign: 'center' }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{ headerShown: true, headerBackTitle: 'Voltar', headerTitleAlign: 'center' }}
+          />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: true, headerBackTitle: 'Voltar', title: 'Editar perfil' }} />
+          <Stack.Screen name="UserProfile" component={UserProfileScreen} options={{ headerShown: true, headerBackTitle: 'Voltar', title: 'Perfil' }} />
+          <Stack.Screen name="EditActivity" component={CreateActivityScreen} options={{ headerShown: true, headerBackTitle: 'Voltar', title: 'Editar atividade' }} />
         </>
       ) : (
         <Stack.Screen name="Login" component={LoginScreen} />
