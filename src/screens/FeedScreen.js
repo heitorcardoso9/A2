@@ -192,18 +192,6 @@ export default function FeedScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.headerRow}>
-        <Text style={styles.wordmark}>Companhia</Text>
-        <TouchableOpacity style={styles.filterIconBtn} onPress={() => setShowFiltrosModal(true)}>
-          <Ionicons name="options-outline" size={20} color={colors.primary} />
-          {filtrosAtivosCount > 0 && (
-            <View style={styles.filterBadge}>
-              <Text style={styles.filterBadgeText}>{filtrosAtivosCount}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
       <View style={styles.filterContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScrollContent}>
           {FILTROS.map((f) => (
@@ -218,14 +206,39 @@ export default function FeedScreen({ navigation }) {
         </ScrollView>
       </View>
 
-      <View style={styles.searchWrap}>
-        <Ionicons name="search" size={16} color={colors.textFaint} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Buscar atividades..."
-          value={busca}
-          onChangeText={setBusca}
-        />
+      <View style={styles.searchRow}>
+        <View style={styles.searchWrap}>
+          <Ionicons name="search" size={16} color={colors.textFaint} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar atividades..."
+            value={busca}
+            onChangeText={setBusca}
+          />
+          {busca.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setBusca('')}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="close-circle" size={18} color={colors.textFaint} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        <TouchableOpacity
+          style={styles.filterIconBtn}
+          onPress={() => setShowFiltrosModal(true)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="options-outline" size={20} color={colors.primary} />
+          {filtrosAtivosCount > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{filtrosAtivosCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <FlatList
@@ -417,19 +430,18 @@ export default function FeedScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background, paddingTop: spacing.md },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, marginBottom: spacing.md },
-  wordmark: { fontSize: fontSize.title, fontWeight: fontWeight.extrabold, color: colors.primary },
-  filterIconBtn: { width: 36, height: 36, borderRadius: 18, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  filterIconBtn: { width: 38, height: 38, borderRadius: 19, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.white, flexShrink: 0 },
   filterBadge: { position: 'absolute', top: -4, right: -4, minWidth: 16, height: 16, borderRadius: 8, backgroundColor: colors.accent, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
   filterBadgeText: { color: colors.white, fontSize: 10, fontWeight: fontWeight.bold },
-  filterContainer: { height: 44, marginBottom: spacing.sm },
+  filterContainer: { height: 44, marginTop: spacing.md, marginBottom: spacing.sm },
   filterScrollContent: { gap: spacing.sm, paddingHorizontal: spacing.lg, alignItems: 'center' },
   filterChip: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: spacing.md + 2 },
   filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterText: { color: colors.textSecondary, fontWeight: fontWeight.semibold, fontSize: fontSize.md },
   filterTextActive: { color: colors.white },
-  searchWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, marginHorizontal: spacing.lg, marginBottom: spacing.sm + 2 },
-  searchInput: { flex: 1, paddingVertical: 9, fontSize: fontSize.base },
+  searchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.sm + 2 },
+  searchWrap: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 8, backgroundColor: colors.white },
+  searchInput: { flex: 1, paddingVertical: 2, fontSize: fontSize.base },
   card: {
     backgroundColor: colors.white,
     borderRadius: radius.xl,

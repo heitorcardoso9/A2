@@ -8,7 +8,6 @@ import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/fi
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, auth, storage } from '../services/firebase';
 import SearchablePickerModal from '../components/SearchablePickerModal';
-import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 import { useIBGEEstados, useIBGECidades } from '../hooks/useIBGELocations';
@@ -313,9 +312,6 @@ export default function CreateActivityScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        {!isEditing && (
-          <ScreenHeader title="Criar atividade" />
-        )}
         <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
           <Text style={styles.label}>Tipo</Text>
           <View style={styles.chipRow}>

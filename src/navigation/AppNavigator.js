@@ -1,5 +1,5 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, TouchableOpacity } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,8 +27,9 @@ const TAB_ICONS = {
 function MainTabs() {
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
+      screenOptions={({ route, navigation }) => ({
+        headerShown: true,
+        headerBackTitleVisible: false,
         tabBarActiveTintColor: '#0E5C46',
         tabBarInactiveTintColor: '#8B958F',
         tabBarPressOpacity: 1,
@@ -40,10 +41,25 @@ function MainTabs() {
         ),
       })}
     >
-      <Tab.Screen name="Feed" component={FeedScreen} />
-      <Tab.Screen name="Chats" component={ChatsListScreen} />
-      <Tab.Screen name="Criar" component={CreateActivityScreen} />
-      <Tab.Screen name="Perfil" component={ProfileScreen} />
+      <Tab.Screen name="Feed" component={FeedScreen} options={{ title: 'Feed' }} />
+      <Tab.Screen name="Chats" component={ChatsListScreen} options={{ title: 'Conversas' }} />
+      <Tab.Screen name="Criar" component={CreateActivityScreen} options={{ title: 'Criar atividade' }} />
+      <Tab.Screen
+        name="Perfil"
+        component={ProfileScreen}
+        options={({ navigation }) => ({
+          title: 'Perfil',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => navigation.navigate('EditProfile')}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="create-outline" size={24} color="#0E5C46" style={{ marginRight: 8 }} />
+            </TouchableOpacity>
+          ),
+        })}
+      />
     </Tab.Navigator>
   );
 }

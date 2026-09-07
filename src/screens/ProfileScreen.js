@@ -145,7 +145,7 @@ export default function ProfileScreen({ navigation }) {
     : outrasFotos.map((p) => p.url);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={{ padding: spacing.xl }}>
         <View style={styles.head}>
           <TouchableOpacity onPress={() => allPhotoUrls.length > 0 && abrirFoto(0)}>
@@ -190,7 +190,6 @@ export default function ProfileScreen({ navigation }) {
           )}
         </View>
 
-        <Button label="Editar perfil" variant="outline" onPress={() => navigation.navigate('EditProfile')} style={{ marginBottom: spacing.sm }} />
         <Button label="Sair" variant="ghost" onPress={handleSair} />
 
         <TouchableOpacity style={styles.sectionHeader} onPress={() => setExpandParticipar(!expandParticipar)}>

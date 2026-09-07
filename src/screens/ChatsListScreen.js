@@ -43,8 +43,7 @@ export default function ChatsListScreen({ navigation }) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.title}>Conversas</Text>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <FlatList
         data={chats}
         keyExtractor={(item) => item.id}
@@ -79,8 +78,7 @@ export default function ChatsListScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, paddingTop: spacing.md },
-  title: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, paddingHorizontal: spacing.lg, marginBottom: spacing.sm },
+  container: { flex: 1, backgroundColor: colors.background },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm + 2 },
   nameRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   name: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
