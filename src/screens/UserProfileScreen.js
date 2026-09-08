@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Image, FlatList, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import PhotoViewerModal from '../components/PhotoViewerModal';
@@ -70,6 +71,12 @@ export default function UserProfileScreen({ navigation, route }) {
             )}
           </TouchableOpacity>
           <Text style={styles.username}>{profile.username || (profile.email || '').split('@')[0]}</Text>
+          {profile.cidade && profile.uf && (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textFaint} />
+              <Text style={styles.locationText}>{profile.cidade}, {profile.uf}</Text>
+            </View>
+          )}
         </View>
 
         {outrasFotos.length > 0 && (
@@ -123,6 +130,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   head: { alignItems: 'center', marginBottom: spacing.md + 2 },
   username: { fontWeight: fontWeight.bold, fontSize: fontSize.lg, marginBottom: 2 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm },
+  locationText: { fontSize: fontSize.sm, color: colors.textSecondary },
   avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
   avatarImg: { width: 100, height: 100, borderRadius: 50, marginBottom: spacing.sm },
   avatarText: { fontWeight: fontWeight.bold, fontSize: fontSize.heading, color: colors.primaryDark },

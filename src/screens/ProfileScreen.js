@@ -159,6 +159,12 @@ export default function ProfileScreen({ navigation }) {
           </TouchableOpacity>
           <Text style={styles.username}>{profile.username || auth.currentUser.email.split('@')[0]}</Text>
           <Text style={styles.email}>{auth.currentUser.email}</Text>
+          {profile.cidade && profile.uf && (
+            <View style={styles.locationRow}>
+              <Ionicons name="location-outline" size={14} color={colors.textFaint} />
+              <Text style={styles.locationText}>{profile.cidade}, {profile.uf}</Text>
+            </View>
+          )}
         </View>
 
         {outrasFotos.length > 0 && (
@@ -261,6 +267,8 @@ const styles = StyleSheet.create({
   avatarText: { fontWeight: fontWeight.bold, fontSize: fontSize.xl, color: colors.primaryDark },
   username: { fontWeight: fontWeight.bold, fontSize: fontSize.xl, marginTop: 2 },
   email: { fontSize: fontSize.sm, color: colors.textFaint, marginTop: 1 },
+  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm },
+  locationText: { fontSize: fontSize.sm, color: colors.textSecondary },
   thumb: { width: 56, height: 56, borderRadius: radius.sm },
   bio: { fontSize: fontSize.md, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.md + 2, lineHeight: 19 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: spacing.xl },

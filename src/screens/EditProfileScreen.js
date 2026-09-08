@@ -7,6 +7,8 @@ import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'fireb
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { auth, db, storage } from '../services/firebase';
 import Button from '../components/Button';
+import SearchablePickerModal from '../components/SearchablePickerModal';
+import { useIBGEEstados, useIBGECidades } from '../hooks/useIBGELocations';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 const TIPOS = ['Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
@@ -16,12 +18,20 @@ export default function EditProfileScreen({ navigation }) {
   const myUid = auth.currentUser.uid;
   const [bio, setBio] = useState('');
   const [interests, setInterests] = useState([]);
+  const [uf, setUf] = useState('');
+  const [cidade, setCidade] = useState('');
   const [photos, setPhotos] = useState([]); // {id, uri, url?, path?, isNew}
   const [photosOriginais, setPhotosOriginais] = useState([]); // snapshot do que existia ao abrir a tela
   const [profileId, setProfileId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [username, setUsername] = useState('');
+
+  const [showUfModal, setShowUfModal] = useState(false);
+  const [showCidadeModal, setShowCidadeModal] = useState(false);
+  const estados = useIBGEEstados() || [];
+  const { cidades = [], carregando: carregandoCidades } = useIBGECidades(uf);
+  const carregandoEstados = false;
 
   useEffect(() => {
     (async () => {
@@ -31,6 +41,8 @@ export default function EditProfileScreen({ navigation }) {
         setBio(data.bio || '');
         setInterests(data.interests || []);
         setUsername(data.username || '');
+        setUf(data.uf || '');
+        setCidade(data.cidade || '');
         const existentes = (data.photos || []).map((p, i) => ({
           id: `existing-${i}`,
           uri: p.url,
@@ -162,6 +174,8 @@ export default function EditProfileScreen({ navigation }) {
         username: usernameLimpo,
         bio: bio.trim(),
         interests,
+        uf,
+        cidade,
         photos: finais.map(({ url, path }) => ({ url, path })),
         profilePhotoUrl: fotoEscolhida ? fotoEscolhida.url : null,
       });
@@ -255,6 +269,39 @@ export default function EditProfileScreen({ navigation }) {
             ))}
           </View>
 
+          <Text style={styles.label}>Estado</Text>
+          <TouchableOpacity
+            style={styles.modalInput}
+            onPress={() => setShowUfModal(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.modalInputText, !uf && styles.modalInputPlaceholder]}>
+              {uf
+                ? `${estados.find((e) => e.sigla === uf)?.nome || uf} (${uf})`
+                : carregandoEstados
+                  ? 'Carregando...'
+                  : 'Selecione seu estado'}
+            </Text>
+            <Ionicons name="chevron-down" size={18} color={colors.textFaint} />
+          </TouchableOpacity>
+
+          <Text style={styles.label}>Cidade</Text>
+          <TouchableOpacity
+            style={[styles.modalInput, { marginTop: spacing.sm }, !uf && styles.inputDisabled]}
+            onPress={() => uf && setShowCidadeModal(true)}
+            disabled={!uf}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.modalInputText, !cidade && styles.modalInputPlaceholder]}>
+              {cidade || (!uf
+                ? 'Selecione o estado primeiro'
+                : carregandoCidades
+                  ? 'Carregando...'
+                  : 'Selecione sua cidade')}
+            </Text>
+            <Ionicons name="chevron-down" size={18} color={!uf ? colors.textFaint : colors.textFaint} />
+          </TouchableOpacity>
+
           <Button
             label={saving ? 'Salvando...' : 'Salvar alterações'}
             onPress={handleSalvar}
@@ -263,6 +310,24 @@ export default function EditProfileScreen({ navigation }) {
           />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SearchablePickerModal
+        visible={showUfModal}
+        title="Selecione o estado"
+        options={(estados || []).map((e) => ({ value: e.sigla, label: `${e.nome} (${e.sigla})` }))}
+        onSelect={(sigla) => {
+          setUf(sigla);
+          setCidade('');
+        }}
+        onClose={() => setShowUfModal(false)}
+      />
+      <SearchablePickerModal
+        visible={showCidadeModal}
+        title="Selecione a cidade"
+        options={(cidades || []).map((nomeCidade) => ({ value: nomeCidade, label: nomeCidade }))}
+        onSelect={(nomeCidade) => setCidade(nomeCidade)}
+        onClose={() => setShowCidadeModal(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -284,4 +349,8 @@ const styles = StyleSheet.create({
   chipText: { color: colors.textSecondary, fontWeight: fontWeight.semibold, fontSize: fontSize.md },
   chipTextActive: { color: colors.white },
   counter: { fontSize: fontSize.xs, color: colors.textFaint, textAlign: 'right', marginTop: 4 },
+  modalInput: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: Platform.OS === 'ios' ? spacing.md + 2 : spacing.md - 2, backgroundColor: colors.white },
+  modalInputText: { fontSize: fontSize.base, color: colors.text },
+  modalInputPlaceholder: { color: colors.textFaint },
+  inputDisabled: { backgroundColor: colors.surface, opacity: 0.7 },
 });

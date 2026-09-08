@@ -9,6 +9,7 @@ import UserName from '../components/UserName';
 import UserAvatar from '../components/UserAvatar';
 import SearchablePickerModal from '../components/SearchablePickerModal';
 import Button from '../components/Button';
+import useUserProfile from '../hooks/useUserProfile';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 import { useIBGEEstados, useIBGECidades } from '../hooks/useIBGELocations';
 
@@ -71,8 +72,14 @@ export default function FeedScreen({ navigation }) {
   const [showEstadoModal, setShowEstadoModal] = useState(false);
   const [showCidadeModal, setShowCidadeModal] = useState(false);
 
-  const estados = useIBGEEstados();
-  const { cidades, carregando: carregandoCidades } = useIBGECidades(ufFiltro);
+  const estados = useIBGEEstados() || [];
+  const { cidades = [], carregando: carregandoCidades } = useIBGECidades(ufFiltro);
+
+  const myUid = auth.currentUser?.uid;
+  const myProfile = useUserProfile(myUid);
+  const meusInteresses = myProfile?.interests || [];
+  const minhaCidade = myProfile?.cidade || '';
+  const minhaUf = myProfile?.uf || '';
 
   useEffect(() => {
     const q = query(collection(db, 'activities'), orderBy('createdAt', 'desc'));
@@ -152,9 +159,33 @@ export default function FeedScreen({ navigation }) {
     setCidadeFiltro('');
   }
 
+  function scoreAtividade(a, agoraTs) {
+    const matchInteresse = meusInteresses.length > 0 && meusInteresses.includes(a.type);
+    const mesmaCidade = !!(minhaCidade && a.cidade && a.cidade === minhaCidade && minhaUf && a.uf && a.uf === minhaUf);
+    const mesmoUf = !!(minhaUf && a.uf && a.uf === minhaUf);
+    const dt = getDate(a);
+    const diasPara = dt ? Math.max(0, (dt.getTime() - agoraTs) / (1000 * 60 * 60 * 24)) : 0;
+    const recencia = Math.max(0, Math.min(5, 5 - diasPara * 0.05));
+    let score = 0;
+    if (mesmaCidade) score += 100;
+    if (matchInteresse) score += 50;
+    if (mesmoUf && !mesmaCidade) score += 10;
+    score += recencia;
+    return {
+      score,
+      matchInteresse,
+      mesmaCidade,
+      mesmoUf,
+      dataTs: dt ? dt.getTime() : 0,
+    };
+  }
+
   const lista = useMemo(() => {
     const agora = new Date();
+    const agoraTs = agora.getTime();
     const termo = normalizar(busca);
+    const temPerfilRelevancia = !!(minhaCidade || meusInteresses.length > 0);
+    const temFiltroManual = !!(filtro !== 'Todos' || ufFiltro || cidadeFiltro || dataInicio || dataFim);
 
     const filtradas = activities.filter((a) => {
       const dt = getDate(a);
@@ -177,15 +208,41 @@ export default function FeedScreen({ navigation }) {
       return true;
     });
 
-    return filtradas.sort((a, b) => {
-      const da = getDate(a);
-      const db_ = getDate(b);
-      if (da && db_) return da - db_;
-      if (da) return -1;
-      if (db_) return 1;
-      return 0;
+    const relevadas = filtradas.map((a) => {
+      const meta = temPerfilRelevancia && !temFiltroManual
+        ? scoreAtividade(a, agoraTs)
+        : { score: 0, matchInteresse: false, mesmaCidade: false, mesmoUf: false, dataTs: getDate(a)?.getTime() || 0 };
+      return {
+        ...a,
+        _relevanceScore: meta.score,
+        _matchInteresse: meta.matchInteresse,
+        _matchCidade: meta.mesmaCidade,
+        _matchUf: meta.mesmoUf,
+        _dataTs: meta.dataTs,
+      };
     });
-  }, [activities, filtro, busca, dataInicio, dataFim, ufFiltro, cidadeFiltro]);
+
+    if (temPerfilRelevancia && !temFiltroManual) {
+      relevadas.sort((a, b) => {
+        if (b._relevanceScore !== a._relevanceScore) return b._relevanceScore - a._relevanceScore;
+        if (a._dataTs && b._dataTs) return a._dataTs - b._dataTs;
+        if (a._dataTs) return -1;
+        if (b._dataTs) return 1;
+        return 0;
+      });
+    } else {
+      relevadas.sort((a, b) => {
+        const da = getDate(a);
+        const db_ = getDate(b);
+        if (da && db_) return da - db_;
+        if (da) return -1;
+        if (db_) return 1;
+        return 0;
+      });
+    }
+
+    return relevadas;
+  }, [activities, filtro, busca, dataInicio, dataFim, ufFiltro, cidadeFiltro, minhaCidade, minhaUf, meusInteresses]);
 
   const filtrosAtivosCount = [dataInicio, dataFim, ufFiltro, cidadeFiltro].filter(Boolean).length;
   const nomeEstadoFiltro = ufFiltro ? estados.find((e) => e.sigla === ufFiltro)?.nome : '';
@@ -319,9 +376,25 @@ export default function FeedScreen({ navigation }) {
               </View>
 
               <View style={styles.cardBody}>
+                {!mine && (item._matchCidade || item._matchInteresse) && (
+                  <View style={styles.relevanceRow}>
+                    {item._matchCidade && (
+                      <View style={[styles.relevanceBadge, styles.relevanceBadgeAccent]}>
+                        <Ionicons name="location-outline" size={12} color={colors.accent} />
+                        <Text style={[styles.relevanceText, styles.relevanceTextAccent]}>Na sua cidade</Text>
+                      </View>
+                    )}
+                    {item._matchInteresse && (
+                      <View style={[styles.relevanceBadge, styles.relevanceBadgeAccent]}>
+                        <Ionicons name="star-outline" size={12} color={colors.accent} />
+                        <Text style={[styles.relevanceText, styles.relevanceTextAccent]}>Seu interesse</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
                 <View style={styles.chipsRow}>
                   <Text style={styles.chip}>{item.type}</Text>
-                  {mine && <Text style={[styles.chip, styles.chipMine]}>Sua</Text>}
+                  {mine && <Text style={[styles.chip, styles.chipMine]}>Sua atividade</Text>}
                 </View>
 
                 <Text style={styles.cardTitle} numberOfLines={2} ellipsizeMode="tail">
@@ -420,7 +493,7 @@ export default function FeedScreen({ navigation }) {
         visible={showCidadeModal}
         title="Selecione a cidade"
         placeholder="Pesquisar cidade..."
-        options={cidades.map((c) => ({ label: c, value: c }))}
+        options={(cidades || []).map((c) => ({ label: c, value: c }))}
         onSelect={setCidadeFiltro}
         onClose={() => setShowCidadeModal(false)}
       />
@@ -522,6 +595,11 @@ const styles = StyleSheet.create({
   },
   chip: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, backgroundColor: colors.primaryTint, color: colors.primaryDark, paddingVertical: 3, paddingHorizontal: spacing.sm + 1, borderRadius: radius.pill, alignSelf: 'flex-start' },
   chipMine: { backgroundColor: colors.accentTint, color: colors.accent },
+  relevanceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 2 },
+  relevanceBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingVertical: 3, paddingHorizontal: 8, borderRadius: radius.pill },
+  relevanceBadgeAccent: { backgroundColor: colors.accentTint },
+  relevanceText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  relevanceTextAccent: { color: colors.accent },
   cardTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
