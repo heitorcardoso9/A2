@@ -13,6 +13,7 @@ import EditProfileScreen from '../screens/EditProfileScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import ActivityDetailScreen from '../screens/ActivityDetailScreen';
 import ChatScreen from '../screens/ChatScreen';
+import { colors } from '../constants/theme';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -30,7 +31,7 @@ function MainTabs() {
       screenOptions={({ route, navigation }) => ({
         headerShown: true,
         headerBackTitleVisible: false,
-        tabBarActiveTintColor: '#0E5C46',
+        tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: '#8B958F',
         tabBarPressOpacity: 1,
         tabBarPressColor: 'transparent',
@@ -55,7 +56,7 @@ function MainTabs() {
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               activeOpacity={0.6}
             >
-              <Ionicons name="create-outline" size={24} color="#0E5C46" style={{ marginRight: 8 }} />
+              <Ionicons name="create-outline" size={24} color={colors.primary} style={{ marginRight: 8 }} />
             </TouchableOpacity>
           ),
         })}
