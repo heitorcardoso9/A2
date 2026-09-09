@@ -25,6 +25,22 @@ const TAB_ICONS = {
   Perfil: 'person',
 };
 
+function NoRippleTabButton({ children, onPress, accessibilityRole, to, ...props }) {
+  return (
+    <TouchableOpacity
+      activeOpacity={1}
+      onPress={onPress}
+      {...props}
+      style={[
+        props.style,
+        { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 6 },
+      ]}
+    >
+      {children}
+    </TouchableOpacity>
+  );
+}
+
 function MainTabs() {
   return (
     <Tab.Navigator
@@ -33,13 +49,13 @@ function MainTabs() {
         headerBackTitleVisible: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: '#8B958F',
-        tabBarPressOpacity: 1,
-        tabBarPressColor: 'transparent',
+        tabBarLabelStyle: { fontSize: 12, fontWeight: '500', marginTop: 2 },
         tabBarIcon: ({ color, size }) => (
           <View pointerEvents="none">
             <Ionicons name={TAB_ICONS[route.name]} size={size} color={color} />
           </View>
         ),
+        tabBarButton: (buttonProps) => <NoRippleTabButton {...buttonProps} />,
       })}
     >
       <Tab.Screen name="Feed" component={FeedScreen} options={{ title: 'Feed' }} />
