@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, FlatList, ScrollView, TextInput, TouchableOpacity, StyleSheet, Modal, Pressable, Image, Dimensions, Platform } from 'react-native';
+import { View, Text, FlatList, ScrollView, TextInput, TouchableOpacity, StyleSheet, Modal, Pressable, Dimensions, Platform } from 'react-native';
+import { Image as RNExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Calendar, LocaleConfig } from 'react-native-calendars';
@@ -344,7 +345,7 @@ export default function FeedScreen({ navigation }) {
             >
               <View style={styles.coverWrap}>
                 {coverUrl ? (
-                  <Image source={{ uri: coverUrl }} style={styles.coverImg} resizeMode="cover" />
+                  <RNExpoImage source={{ uri: coverUrl }} style={styles.coverImg} contentFit="cover" />
                 ) : (
                   <View style={styles.coverEmpty}>
                     <Ionicons name="calendar-outline" size={38} color={colors.textFaint} />

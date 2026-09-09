@@ -1,5 +1,6 @@
 import React from 'react';
-import { Modal, View, Image, TouchableOpacity, FlatList, StyleSheet, Dimensions } from 'react-native';
+import { Modal, View, TouchableOpacity, FlatList, StyleSheet, Dimensions } from 'react-native';
+import { Image as RNExpoImage } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { spacing } from '../constants/theme';
@@ -26,7 +27,7 @@ export default function PhotoViewerModal({ visible, photos, initialIndex = 0, on
           showsHorizontalScrollIndicator={false}
           renderItem={({ item }) => (
             <View style={styles.page}>
-              <Image source={{ uri: item }} style={styles.image} resizeMode="contain" />
+              <RNExpoImage source={{ uri: item }} style={styles.image} contentFit="contain" />
             </View>
           )}
         />

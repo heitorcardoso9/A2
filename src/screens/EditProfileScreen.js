@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Image, Alert, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import { Image as RNExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -140,21 +141,35 @@ export default function EditProfileScreen({ navigation }) {
           console.log(`[EditProfile] foto ${i + 1}/${photos.length}: uri ok? ${!!item.uri}`);
           let blob;
           try {
-            const resposta = await fetch(item.uri);
-            blob = await resposta.blob();
-            console.log(`[EditProfile] foto ${i + 1}: blob carregado (${blob.size} bytes)`);
+            blob = await new Promise((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              xhr.onload = function () {
+                resolve(xhr.response);
+              };
+              xhr.onerror = function (err) {
+                reject(err || new Error('XHR blob falhou'));
+              };
+              xhr.responseType = 'blob';
+              xhr.open('GET', item.uri, true);
+              xhr.send(null);
+            });
+            console.log(`[EditProfile] foto ${i + 1}: XHR blob nativo ok (size ${blob?.size ?? '?'} bytes)`);
           } catch (e) {
-            console.error(`[EditProfile] foto ${i + 1}: ERRO ao carregar blob`, e);
+            console.error(`[EditProfile] foto ${i + 1}: ERRO no XHR blob`, e);
             throw e;
           }
           const path = `profilePhotos/${myUid}/${Date.now()}-${i}.jpg`;
           const storageRef = ref(storage, path);
-          console.log(`[EditProfile] foto ${i + 1}: uploadBytes -> ${path}`);
+          console.log(`[EditProfile] foto ${i + 1}: uploadBytes (blob nativo pronto) -> ${path}`);
           try {
             await uploadBytes(storageRef, blob);
           } catch (e) {
             console.error(`[EditProfile] foto ${i + 1}: ERRO no uploadBytes`, e?.code || '', e?.message || '', e?.serverResponse || '');
             throw e;
+          } finally {
+            if (blob && typeof blob.close === 'function') {
+              try { blob.close(); } catch {}
+            }
           }
           let url;
           try {
@@ -216,7 +231,7 @@ export default function EditProfileScreen({ navigation }) {
           <View style={styles.photoGrid}>
             {photos.map((item) => (
               <TouchableOpacity key={item.id} style={styles.photoWrap} onPress={() => setProfileId(item.id)}>
-                <Image source={{ uri: item.uri }} style={styles.photoImg} />
+                <RNExpoImage source={{ uri: item.uri }} style={styles.photoImg} contentFit="cover" />
                 {profileId === item.id && (
                   <View style={styles.profileBadge}>
                     <Ionicons name="star" size={12} color={colors.white} />

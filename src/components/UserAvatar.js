@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image as RNExpoImage } from 'expo-image';
 import useUserProfile from '../hooks/useUserProfile';
 import { colors, fontWeight } from '../constants/theme';
 
@@ -11,7 +12,7 @@ export default function UserAvatar({ userId, fallbackEmail, size = 38 }) {
   const dimensionStyle = { width: size, height: size, borderRadius: size / 2 };
 
   if (photoUrl) {
-    return <Image source={{ uri: photoUrl }} style={dimensionStyle} />;
+    return <RNExpoImage source={{ uri: photoUrl }} style={dimensionStyle} contentFit="cover" />;
   }
   return (
     <View style={[styles.placeholder, dimensionStyle]}>

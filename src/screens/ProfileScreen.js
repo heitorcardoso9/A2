@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { Image as RNExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { signOut } from 'firebase/auth';
@@ -150,7 +151,7 @@ export default function ProfileScreen({ navigation }) {
         <View style={styles.head}>
           <TouchableOpacity onPress={() => allPhotoUrls.length > 0 && abrirFoto(0)}>
             {profile.profilePhotoUrl ? (
-              <Image source={{ uri: profile.profilePhotoUrl }} style={styles.avatarImg} />
+              <RNExpoImage source={{ uri: profile.profilePhotoUrl }} style={styles.avatarImg} contentFit="cover" />
             ) : (
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{iniciais}</Text>
@@ -176,7 +177,7 @@ export default function ProfileScreen({ navigation }) {
             showsHorizontalScrollIndicator={false}
             renderItem={({ item, index }) => (
               <TouchableOpacity onPress={() => abrirFoto(index + (profile.profilePhotoUrl ? 1 : 0))}>
-                <Image source={{ uri: item.url }} style={styles.thumb} />
+                <RNExpoImage source={{ uri: item.url }} style={styles.thumb} contentFit="cover" />
               </TouchableOpacity>
             )}
           />

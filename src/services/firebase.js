@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import { initializeAuth, getAuth, getReactNativePersistence } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -16,9 +16,22 @@ const firebaseConfig = {
 console.log('[firebase] storageBucket configurado:', firebaseConfig.storageBucket);
 
 const app = initializeApp(firebaseConfig);
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+let authInstance;
+try {
+  authInstance = initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+  console.log('[firebase] auth inicializada com persistência AsyncStorage.');
+} catch (e) {
+  if (e?.code === 'auth/already-initialized') {
+    authInstance = getAuth(app);
+    console.log('[firebase] auth já existente, reutilizando.');
+  } else {
+    console.error('[firebase] ERRO ao inicializar auth:', e?.code || '', e?.message || '');
+    throw e;
+  }
+}
+export const auth = authInstance;
 export const db = getFirestore(app);
 export const storage = firebaseConfig.storageBucket
   ? getStorage(app, `gs://${firebaseConfig.storageBucket}`)

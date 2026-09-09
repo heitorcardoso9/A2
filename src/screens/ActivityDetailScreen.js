@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Image, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions } from 'react-native';
+import { Image as RNExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
@@ -244,7 +245,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
                     }}
                     activeOpacity={0.85}
                   >
-                    <Image source={{ uri: typeof url === 'string' ? url : url.url }} style={styles.thumbImg} resizeMode="cover" />
+                    <RNExpoImage source={{ uri: typeof url === 'string' ? url : url.url }} style={styles.thumbImg} contentFit="cover" />
                     {ehUltimoVisivel && (
                       <View style={styles.moreOverlay}>
                         <Ionicons name="images-outline" size={16} color={colors.white} />

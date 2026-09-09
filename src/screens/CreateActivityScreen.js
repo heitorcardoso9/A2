@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, KeyboardAvoidingView, Image, Dimensions } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, Platform, KeyboardAvoidingView, Dimensions } from 'react-native';
+import { Image as RNExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +14,24 @@ import { colors, spacing, radius, fontSize, fontWeight } from '../constants/them
 import { useIBGEEstados, useIBGECidades } from '../hooks/useIBGELocations';
 
 const TIPOS = ['Restaurante', 'Esporte', 'Cinema', 'Shows e eventos', 'Passeio', 'Viagem', 'Outros'];
+const TIPO_ICONS = {
+  'Restaurante': '🍽️',
+  'Esporte': '⚽',
+  'Cinema': '🎬',
+  'Shows e eventos': '🎤',
+  'Passeio': '🌳',
+  'Viagem': '✈️',
+  'Outros': '✨',
+};
+const TIPO_SUGESTOES = {
+  'Restaurante': 'Ex: Jantar japonês sábado 20h',
+  'Esporte': 'Ex: Futebol no clube sábado a tarde',
+  'Cinema': 'Ex: Filme novo no shopping 19h',
+  'Shows e eventos': 'Ex: Show de rock na casa de shows',
+  'Passeio': 'Ex: Trilha na Pedra Grande domingo manhã',
+  'Viagem': 'Ex: Final de semana na praia',
+  'Outros': 'Ex: Encontro para tomar um café',
+};
 const MAX_FOTOS_ATIVIDADE = 5;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -26,7 +45,7 @@ export default function CreateActivityScreen({ navigation, route }) {
   const activityParam = route.params?.activity || null;
   const isEditing = !!activityParam;
 
-  const [tipo, setTipo] = useState(TIPOS[0]);
+  const [tipo, setTipo] = useState(isEditing ? (activityParam.type || TIPOS[0]) : null);
   const [titulo, setTitulo] = useState('');
   const [desc, setDesc] = useState('');
   const [dataHora, setDataHora] = useState(horarioPadrao);
@@ -42,11 +61,11 @@ export default function CreateActivityScreen({ navigation, route }) {
 
   const [photos, setPhotos] = useState([]); // {id, uri, url?, path?, isNew}
   const [photosOriginais, setPhotosOriginais] = useState([]); // snapshot para edição
-
   const [loading, setLoading] = useState(false);
+  const [showTypeHint, setShowTypeHint] = useState(false);
 
-  const estados = useIBGEEstados();
-  const { cidades, carregando: carregandoCidades } = useIBGECidades(uf);
+  const estados = useIBGEEstados() || [];
+  const { cidades = [], carregando: carregandoCidades } = useIBGECidades(uf);
 
   useEffect(() => {
     if (isEditing) {
@@ -128,7 +147,7 @@ export default function CreateActivityScreen({ navigation, route }) {
   }
 
   function resetForm() {
-    setTipo(TIPOS[0]);
+    setTipo(null);
     setTitulo('');
     setDesc('');
     setDataHora(horarioPadrao());
@@ -184,6 +203,10 @@ export default function CreateActivityScreen({ navigation, route }) {
   }
 
   async function handlePublicar() {
+    if (!tipo) {
+      Alert.alert('Ops', 'Escolha o tipo da atividade.');
+      return;
+    }
     if (!titulo.trim()) {
       Alert.alert('Ops', 'Preencha o título da atividade.');
       return;
@@ -224,21 +247,35 @@ export default function CreateActivityScreen({ navigation, route }) {
             console.log(`[upload] foto ${i + 1}/${photos.length}: uri ok? ${!!item.uri}`);
             let blob;
             try {
-              const resposta = await fetch(item.uri);
-              blob = await resposta.blob();
-              console.log(`[upload] foto ${i + 1}: blob carregado (${blob.size} bytes)`);
+              blob = await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.onload = function () {
+                  resolve(xhr.response);
+                };
+                xhr.onerror = function (err) {
+                  reject(err || new Error('XHR blob falhou'));
+                };
+                xhr.responseType = 'blob';
+                xhr.open('GET', item.uri, true);
+                xhr.send(null);
+              });
+              console.log(`[upload] foto ${i + 1}: XHR blob nativo ok (size ${blob?.size ?? '?'} bytes)`);
             } catch (e) {
-              console.error(`[upload] foto ${i + 1}: ERRO ao carregar blob`, e);
+              console.error(`[upload] foto ${i + 1}: ERRO no XHR blob`, e);
               throw e;
             }
             const path = `activities/${activityId}/${Date.now()}-${i}.jpg`;
             const storageRef = ref(storage, path);
-            console.log(`[upload] foto ${i + 1}: uploadBytes -> ${path}`);
+            console.log(`[upload] foto ${i + 1}: uploadBytes (blob nativo pronto) -> ${path}`);
             try {
               await uploadBytes(storageRef, blob);
             } catch (e) {
               console.error(`[upload] foto ${i + 1}: ERRO no uploadBytes`, e?.code || '', e?.message || '', e?.serverResponse || '');
               throw e;
+            } finally {
+              if (blob && typeof blob.close === 'function') {
+                try { blob.close(); } catch {}
+              }
             }
             let url;
             try {
@@ -309,130 +346,241 @@ export default function CreateActivityScreen({ navigation, route }) {
 
   const nomeEstadoSelecionado = uf ? estados.find((e) => e.sigla === uf)?.nome : '';
 
+  const progresso = useMemo(() => {
+    const itens = [
+      !!tipo,
+      !!titulo.trim(),
+      !!dataHora,
+      true,
+      !!uf,
+      !!cidade,
+    ];
+    const base = itens.filter(Boolean).length / itens.length;
+    let bonus = 0;
+    if (desc.trim()) bonus += 0.05;
+    if (photos.length > 0) bonus += 0.05;
+    if (Number(vagas) > 0) bonus += 0.02;
+    return Math.min(1, base + bonus);
+  }, [tipo, titulo, dataHora, uf, cidade, desc, photos, vagas]);
+
+  const placeholderTitulo = tipo ? TIPO_SUGESTOES[tipo] : 'Ex: Trilha na Pedra Grande';
+  const textoProgresso = progresso >= 1
+    ? 'Tudo pronto para publicar! 🎉'
+    : `${Math.round(progresso * 100)}% preenchido`;
+  const bordaErroTipo = !tipo && showTypeHint;
+
+  useEffect(() => {
+    if (isEditing) return;
+    const t = setTimeout(() => setShowTypeHint(true), 1500);
+    return () => clearTimeout(t);
+  }, [isEditing]);
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={{ padding: spacing.xl }} keyboardShouldPersistTaps="handled">
-          <Text style={styles.label}>Tipo</Text>
-          <View style={styles.chipRow}>
-            {TIPOS.map((t) => (
-              <TouchableOpacity key={t} style={[styles.chip, tipo === t && styles.chipActive]} onPress={() => setTipo(t)}>
-                <Text style={[styles.chipText, tipo === t && styles.chipTextActive]}>{t}</Text>
-              </TouchableOpacity>
-            ))}
+        {/* Barra de progresso STICKY (sempre visível no topo) */}
+        <View style={styles.progressSticky}>
+          <View style={styles.progressWrap}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progresso * 100}%`, backgroundColor: progresso >= 1 ? colors.success : colors.primary }]} />
+            </View>
+            <Text style={styles.progressText}>{textoProgresso}</Text>
           </View>
+        </View>
 
-          <Text style={styles.label}>Título</Text>
-          <TextInput style={styles.input} value={titulo} onChangeText={setTitulo} placeholder="Ex: Trilha na Pedra Grande" maxLength={60} />
-          <Text style={styles.counter}>{titulo.length}/60</Text>
-
-          <Text style={styles.label}>Data</Text>
-          <TouchableOpacity style={styles.input} onPress={() => setShowDatePicker(true)}>
-            <Text style={styles.inputText}>{formatarData(dataHora)}</Text>
-          </TouchableOpacity>
-          {showDatePicker && (
-            <DateTimePicker
-              value={dataHora}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
-              minimumDate={new Date()}
-              onValueChange={onValueChangeDate}
-              onDismiss={onDismissDate}
-            />
-          )}
-          {Platform.OS === 'ios' && showDatePicker && (
-            <TouchableOpacity style={styles.doneBtn} onPress={() => setShowDatePicker(false)}>
-              <Text style={styles.doneBtnText}>Concluído</Text>
-            </TouchableOpacity>
-          )}
-
-          <Text style={styles.label}>Horário</Text>
-          <TouchableOpacity style={styles.input} onPress={() => setShowTimePicker(true)}>
-            <Text style={styles.inputText}>{formatarHora(dataHora)}</Text>
-          </TouchableOpacity>
-          {showTimePicker && (
-            <DateTimePicker
-              value={dataHora}
-              mode="time"
-              display="spinner"
-              minimumDate={ehDataHoje(dataHora) ? new Date() : undefined}
-              onValueChange={onValueChangeTime}
-              onDismiss={onDismissTime}
-            />
-          )}
-          {Platform.OS === 'ios' && showTimePicker && (
-            <TouchableOpacity style={styles.doneBtn} onPress={() => setShowTimePicker(false)}>
-              <Text style={styles.doneBtnText}>Concluído</Text>
-            </TouchableOpacity>
-          )}
-
-          <Text style={styles.label}>Estado</Text>
-          <TouchableOpacity style={styles.input} onPress={() => setShowEstadoModal(true)}>
-            <Text style={styles.inputText}>{nomeEstadoSelecionado || 'Selecione o estado'}</Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Cidade</Text>
-          <TouchableOpacity
-            style={[styles.input, !uf && styles.inputDisabled]}
-            onPress={() => uf && setShowCidadeModal(true)}
-            disabled={!uf}
-          >
-            <Text style={styles.inputText}>
-              {cidade || (!uf ? 'Selecione o estado primeiro' : carregandoCidades ? 'Carregando cidades...' : 'Selecione a cidade')}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.label}>Descrição</Text>
-          <TextInput
-            style={[styles.input, { height: 90, textAlignVertical: 'top' }]}
-            value={desc}
-            onChangeText={setDesc}
-            placeholder="Conte mais sobre essa atividade"
-            multiline
-            maxLength={500}
-          />
-          <Text style={styles.counter}>{desc.length}/500</Text>
-
-          <Text style={styles.label}>Vagas</Text>
-          <TextInput
-            style={styles.input}
-            value={vagas}
-            onChangeText={(t) => setVagas(t.replace(/[^0-9]/g, '').slice(0, 4))}
-            placeholder="0 = ilimitadas"
-            placeholderTextColor={colors.textFaint}
-            keyboardType="number-pad"
-          />
-          <Text style={styles.hint}>Deixe 0 para permitir quantas pessoas quiserem.</Text>
-
-          <Text style={styles.label}>Fotos ({photos.length}/{MAX_FOTOS_ATIVIDADE})</Text>
-          <Text style={styles.hint}>Adicione até {MAX_FOTOS_ATIVIDADE} fotos para ilustrar sua atividade.</Text>
-          <View style={styles.photoGrid}>
-            {photos.map((item) => (
-              <View key={item.id} style={styles.photoWrap}>
-                <Image source={{ uri: item.uri }} style={styles.photoImg} />
-                <TouchableOpacity style={styles.removeBtn} onPress={() => removerFoto(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Ionicons name="close" size={14} color={colors.white} />
-                </TouchableOpacity>
+        <ScrollView
+          contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingTop: 4, paddingBottom: spacing.xxl + spacing.xl }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* SEÇÃO 1: TIPO */}
+          <View style={[styles.sectionCard, bordaErroTipo && styles.sectionCardHint]}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Text style={{ fontSize: fontSize.md }}>🧩</Text>
               </View>
-            ))}
-            {photos.length < MAX_FOTOS_ATIVIDADE && (
-              <TouchableOpacity style={styles.addPhotoBtn} onPress={adicionarFotos}>
-                <Ionicons name="add" size={28} color={colors.textSecondary} />
-              </TouchableOpacity>
+              <Text style={styles.sectionTitle}>Qual o tipo do rolê?</Text>
+              {bordaErroTipo && (
+                <Ionicons name="alert-circle" size={18} color={colors.accent} style={{ marginLeft: 'auto' }} />
+              )}
+            </View>
+            <View style={styles.chipRow}>
+              {TIPOS.map((t) => (
+                <TouchableOpacity key={t} style={[styles.chip, tipo === t && styles.chipActive]} onPress={() => { setTipo(t); if (showTypeHint) setShowTypeHint(false); }}>
+                  <Text style={styles.chipEmoji}>{TIPO_ICONS[t]}</Text>
+                  <Text style={[styles.chipText, tipo === t && styles.chipTextActive]}>{t}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {bordaErroTipo && (
+              <Text style={styles.hintError}>Toque em um tipo para escolher</Text>
             )}
           </View>
 
+          {/* SEÇÃO 2: SOBRE (Título + Descrição) */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="document-text-outline" size={16} color={colors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Sobre o rolê</Text>
+            </View>
+
+            <Text style={styles.labelInline}>Título</Text>
+            <TextInput
+              style={[styles.input, styles.inputInsideCard]}
+              value={titulo}
+              onChangeText={setTitulo}
+              placeholder={placeholderTitulo}
+              placeholderTextColor={colors.textFaint}
+              maxLength={60}
+            />
+            <Text style={styles.counter}>{titulo.length}/60</Text>
+
+            <Text style={styles.labelInline}>Descrição <Text style={styles.labelOptional}>(opcional)</Text></Text>
+            <TextInput
+              style={[styles.input, styles.inputInsideCard, styles.inputMultiline]}
+              value={desc}
+              onChangeText={setDesc}
+              placeholder="Conte mais sobre o que vai rolar"
+              placeholderTextColor={colors.textFaint}
+              multiline
+              maxLength={500}
+            />
+            <Text style={styles.counter}>{desc.length}/500</Text>
+          </View>
+
+          {/* SEÇÃO 3: QUANDO E ONDE */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Quando e onde?</Text>
+            </View>
+
+            <Text style={styles.labelInline}>Data</Text>
+            <TouchableOpacity style={[styles.input, styles.inputInsideCard, styles.inputRow]} onPress={() => setShowDatePicker((v) => !v)}>
+              <Text style={styles.inputText}>{formatarData(dataHora)}</Text>
+              <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {showDatePicker && (
+              <View style={styles.pickerWrap}>
+                <DateTimePicker
+                  value={dataHora}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
+                  minimumDate={new Date()}
+                  onValueChange={onValueChangeDate}
+                  onDismiss={onDismissDate}
+                />
+              </View>
+            )}
+
+            <Text style={styles.labelInline}>Horário</Text>
+            <TouchableOpacity style={[styles.input, styles.inputInsideCard, styles.inputRow]} onPress={() => setShowTimePicker((v) => !v)}>
+              <Text style={styles.inputText}>{formatarHora(dataHora)}</Text>
+              <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {showTimePicker && (
+              <View style={styles.pickerWrap}>
+                <DateTimePicker
+                  value={dataHora}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={ehDataHoje(dataHora) ? new Date() : undefined}
+                  onValueChange={onValueChangeTime}
+                  onDismiss={onDismissTime}
+                />
+              </View>
+            )}
+
+            <Text style={styles.labelInline}>Estado</Text>
+            <TouchableOpacity style={[styles.input, styles.inputInsideCard, styles.inputRow]} onPress={() => setShowEstadoModal(true)}>
+              <Text style={[styles.inputText, !nomeEstadoSelecionado && styles.inputTextDim]} numberOfLines={1}>
+                {nomeEstadoSelecionado || 'Selecione o estado'}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+            </TouchableOpacity>
+
+            <Text style={styles.labelInline}>Cidade</Text>
+            <TouchableOpacity
+              style={[styles.input, styles.inputInsideCard, styles.inputRow, !uf && styles.inputDisabled]}
+              onPress={() => uf && setShowCidadeModal(true)}
+              disabled={!uf}
+            >
+              <Text style={[styles.inputText, !cidade && styles.inputTextDim]} numberOfLines={1}>
+                {cidade || (!uf ? 'Selecione o estado primeiro' : carregandoCidades ? 'Carregando cidades...' : 'Selecione a cidade')}
+              </Text>
+              <Ionicons name="chevron-down" size={18} color={!uf ? colors.textFaint : colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* SEÇÃO 4: FINALIZAÇÃO (Vagas + Fotos) */}
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="people-outline" size={16} color={colors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>Participantes</Text>
+            </View>
+
+            <Text style={styles.labelInline}>Máximo de vagas</Text>
+            <TextInput
+              style={[styles.input, styles.inputInsideCard]}
+              value={vagas}
+              onChangeText={(t) => setVagas(t.replace(/[^0-9]/g, '').slice(0, 4))}
+              placeholder="0 = ilimitadas"
+              placeholderTextColor={colors.textFaint}
+              keyboardType="number-pad"
+            />
+            <Text style={styles.hint}>Deixe 0 para permitir quantas pessoas quiserem.</Text>
+          </View>
+
+          <View style={styles.sectionCard}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.sectionIconWrap}>
+                <Ionicons name="images-outline" size={16} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sectionTitle}>Fotos ({photos.length}/{MAX_FOTOS_ATIVIDADE})</Text>
+                <Text style={styles.hintInline}>Até {MAX_FOTOS_ATIVIDADE} fotos para ilustrar</Text>
+              </View>
+            </View>
+            <View style={styles.photoGrid}>
+              {photos.map((item) => (
+                <View key={item.id} style={styles.photoWrap}>
+                  <RNExpoImage source={{ uri: item.uri }} style={styles.photoImg} contentFit="cover" />
+                  <TouchableOpacity style={styles.removeBtn} onPress={() => removerFoto(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="close" size={14} color={colors.white} />
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {photos.length < MAX_FOTOS_ATIVIDADE && (
+                <TouchableOpacity style={styles.addPhotoBtn} onPress={adicionarFotos}>
+                  <View style={styles.addPhotoInner}>
+                    <Ionicons name="add" size={28} color={colors.primary} />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </ScrollView>
+
+        {/* BOTÃO STICKY NO RODAPÉ */}
+        <View style={styles.footerSticky}>
+          {!isEditing && (
+            <TouchableOpacity onPress={handleCancelar} disabled={loading} style={styles.footerCancel} activeOpacity={0.6}>
+              <Text style={styles.footerCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          )}
           <Button
             label={loading ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Publicar atividade'}
             onPress={handlePublicar}
             disabled={loading}
-            style={{ marginTop: spacing.xl + 2 }}
+            style={[{ flex: 1 }, isEditing ? null : {}]}
           />
-
-          {!isEditing && (
-            <Button label="Cancelar" variant="ghost" onPress={handleCancelar} disabled={loading} style={{ marginTop: spacing.sm }} />
-          )}
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
 
       <SearchablePickerModal
@@ -459,25 +607,108 @@ export default function CreateActivityScreen({ navigation, route }) {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   label: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary, marginTop: spacing.md + 2, marginBottom: spacing.sm - 2 },
-  hint: { fontSize: fontSize.sm, color: colors.textFaint, marginBottom: spacing.sm },
+  labelInline: { fontSize: fontSize.sm + 1, fontWeight: fontWeight.bold, color: colors.textSecondary, marginTop: spacing.md - 1, marginBottom: spacing.sm - 1 },
+  labelOptional: { fontSize: fontSize.xs, color: colors.textFaint, fontWeight: fontWeight.regular },
+  hint: { fontSize: fontSize.sm, color: colors.textFaint, marginBottom: spacing.sm, marginTop: 4 },
+  hintInline: { fontSize: fontSize.xs, color: colors.textFaint, marginTop: 1 },
+  hintError: { fontSize: fontSize.sm, color: colors.accent, marginTop: spacing.sm, fontWeight: fontWeight.medium },
   input: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: spacing.md, fontSize: fontSize.base, justifyContent: 'center' },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  inputInsideCard: { backgroundColor: colors.backgroundAlt, borderColor: colors.borderLight },
   inputDisabled: { opacity: 0.5 },
+  inputMultiline: { height: 100, textAlignVertical: 'top', paddingTop: spacing.md - 2 },
   inputText: { fontSize: fontSize.base, color: colors.text },
+  inputTextDim: { color: colors.textFaint },
   doneBtn: { alignSelf: 'flex-end', paddingVertical: spacing.sm, paddingHorizontal: 4 },
   doneBtnText: { color: colors.primary, fontWeight: fontWeight.bold, fontSize: fontSize.base },
+  progressWrap: { marginBottom: 0 },
+  progressSticky: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    zIndex: 10,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black || '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+      },
+      android: { elevation: 2 },
+    }),
+  },
+  progressBar: { height: 8, backgroundColor: colors.borderLight, borderRadius: 999, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 999, transition: 'width 0.3s ease' },
+  progressText: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 4, fontWeight: fontWeight.medium },
+  sectionCard: {
+    backgroundColor: colors.white,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+    marginBottom: spacing.md + 2,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black || '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 10,
+      },
+      android: { elevation: 1 },
+    }),
+  },
+  sectionCardHint: {
+    borderColor: colors.accent,
+    borderWidth: 2,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md - 2,
+  },
+  sectionIconWrap: {
+    width: 32, height: 32, borderRadius: 10,
+    backgroundColor: colors.primaryTint,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  sectionTitle: {
+    fontSize: fontSize.base + 1,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  chip: { borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingVertical: 6, paddingHorizontal: spacing.md + 2 },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingVertical: 7, paddingHorizontal: spacing.md },
   chipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-  chipText: { color: colors.textSecondary, fontWeight: fontWeight.semibold, fontSize: fontSize.md },
+  chipEmoji: { fontSize: fontSize.md, lineHeight: 18 },
+  chipText: { color: colors.textSecondary, fontWeight: fontWeight.semibold, fontSize: fontSize.md - 1 },
   chipTextActive: { color: colors.white },
+  pickerWrap: {
+    marginTop: spacing.sm,
+    backgroundColor: colors.white,
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    marginBottom: spacing.sm,
+  },
   counter: { fontSize: fontSize.xs, color: colors.textFaint, textAlign: 'right', marginTop: 4 },
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   photoWrap: {
-    width: (SCREEN_WIDTH - spacing.xl * 2 - spacing.sm * 2) / 3,
+    width: (SCREEN_WIDTH - spacing.lg * 2 - spacing.sm * 2) / 3,
     aspectRatio: 1,
     borderRadius: radius.md,
     overflow: 'hidden',
@@ -496,14 +727,49 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   addPhotoBtn: {
-    width: (SCREEN_WIDTH - spacing.xl * 2 - spacing.sm * 2) / 3,
+    width: (SCREEN_WIDTH - spacing.lg * 2 - spacing.sm * 2) / 3,
     aspectRatio: 1,
     borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: 1.5,
+    borderColor: colors.primaryTint,
     borderStyle: 'dashed',
+    overflow: 'hidden',
+    backgroundColor: colors.white,
+  },
+  addPhotoInner: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.background,
+  },
+  footerSticky: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.white,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+    ...Platform.select({
+      ios: {
+        shadowColor: colors.black || '#000',
+        shadowOffset: { width: 0, height: -3 },
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  footerCancel: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+  },
+  footerCancelText: {
+    fontSize: fontSize.base,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.semibold,
   },
 });
