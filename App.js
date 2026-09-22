@@ -1,11 +1,12 @@
 import 'react-native-url-polyfill/auto';
 import React, { useEffect, useState } from 'react';
-import { View, ActivityIndicator, Platform, LogBox } from 'react-native';
+import { View, ActivityIndicator, Platform, LogBox, StatusBar } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
-import { NavigationBar } from 'expo-navigation-bar';
+import * as NavigationBar from 'expo-navigation-bar';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './src/services/firebase';
 import AppNavigator from './src/navigation/AppNavigator';
+import { colors } from './src/constants/theme';
 
 LogBox.ignoreLogs([
   'Response.blob() is using React',
@@ -21,9 +22,13 @@ export default function App() {
   const [checking, setChecking] = useState(true);
 
   useEffect(() => {
+    StatusBar.setBarStyle('dark-content', true);
     if (Platform.OS === 'android') {
+      StatusBar.setBackgroundColor('#FFFFFF', true);
       try {
-        NavigationBar.setStyle('dark');
+        NavigationBar.setBackgroundColorAsync('#FFFFFF');
+        NavigationBar.setButtonStyleAsync('light');
+        NavigationBar.setVisibilityAsync('visible');
       } catch (_) {}
     }
   }, []);
@@ -39,13 +44,14 @@ export default function App() {
   if (checking) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#0E5C46" />
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
   return (
     <NavigationContainer>
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
       <AppNavigator isLoggedIn={!!user} />
     </NavigationContainer>
   );
