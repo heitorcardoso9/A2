@@ -14,6 +14,9 @@ LogBox.ignoreLogs([
   'Non-serializable values were found in the navigation state',
   'AsyncStorage has been extracted from react-native core',
   'Firebase:',
+  '@firebase/firestore:',
+  'BloomFilter',
+  'BloomFilterError',
   'initializeAuth',
 ]);
 

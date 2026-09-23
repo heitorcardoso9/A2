@@ -74,6 +74,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
         activityId: activity.id,
         activityTitle: activity.title,
         activityDate: activity.date,
+        activityDateTime: activity.dateTime || null,
         activityLocal: activity.local,
         activityOwnerId: activity.ownerId,
         userId: auth.currentUser.uid,
