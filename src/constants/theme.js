@@ -19,6 +19,9 @@ export const colors = {
   successBg: '#E1F0E6',
   warning: '#8A5A12',
   warningBg: '#FCEEDB',
+  danger: '#B42318',
+  dangerBg: '#FCE8E6',
+  info: '#1E5BBF',
 };
 
 export const spacing = {

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions } from 'react-native';
 import { Image as RNExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserAvatar from '../components/UserAvatar';
 import UserName from '../components/UserName';
@@ -15,13 +15,16 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function ActivityDetailScreen({ navigation, route }) {
   const { activity, mine } = route.params;
-  const [sent, setSent] = useState(false);
   const [checking, setChecking] = useState(!mine);
   const [sending, setSending] = useState(false);
+  const [canceling, setCanceling] = useState(false);
   const [interessados, setInteressados] = useState([]);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
   const [tabAtiva, setTabAtiva] = useState('todos');
+
+  const [meuStatus, setMeuStatus] = useState(null);
+  const [myParticipationId, setMyParticipationId] = useState(null);
 
   const maxParticipants = activity.maxParticipants ?? null;
   const confirmados = interessados.filter((p) => p.status === 'confirmado');
@@ -38,52 +41,111 @@ export default function ActivityDetailScreen({ navigation, route }) {
 
   useEffect(() => {
     if (mine) return;
-    checkInterest();
-  }, []);
-
-  useEffect(() => {
-    if (!mine) return;
-    const q = query(collection(db, 'participations'), where('activityId', '==', activity.id));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setInteressados(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-    return unsubscribe;
-  }, []);
-
-  async function checkInterest() {
+    let unsubscribe = () => {};
     try {
       const q = query(
         collection(db, 'participations'),
         where('activityId', '==', activity.id),
         where('userId', '==', auth.currentUser.uid)
       );
-      const snap = await getDocs(q);
-      setSent(!snap.empty);
+      unsubscribe = onSnapshot(q, (snap) => {
+        if (snap.empty) {
+          setMeuStatus(null);
+          setMyParticipationId(null);
+        } else {
+          const docData = snap.docs[0];
+          const status = docData.data()?.status || null;
+          setMeuStatus(status);
+          setMyParticipationId(docData.id);
+        }
+        setChecking(false);
+      });
     } catch (e) {
-      // Falha silenciosa na checagem é aceitável: deixa o botão normal
-    } finally {
+      setMeuStatus(null);
+      setMyParticipationId(null);
       setChecking(false);
     }
-  }
+    return () => unsubscribe();
+  }, [activity.id, mine]);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'participations'),
+      where('activityId', '==', activity.id)
+    );
+    const unsubInteressados = onSnapshot(q, (snap) => {
+      const lista = snap.docs.map((d) => {
+        const data = d.data();
+        return {
+          id: d.id,
+          userId: data.userId,
+          userEmail: data.userEmail,
+          status: data.status,
+          createdAt: data.createdAt,
+        };
+      });
+      const vistos = new Map();
+      for (const p of lista) {
+        const existente = vistos.get(p.userId);
+        if (!existente) {
+          vistos.set(p.userId, p);
+        } else {
+          const t1 = p.createdAt?.toMillis?.() ?? 0;
+          const t2 = existente.createdAt?.toMillis?.() ?? 0;
+          if (t1 > t2) vistos.set(p.userId, p);
+        }
+      }
+      const unica = Array.from(vistos.values());
+      unica.sort((a, b) => {
+        const ta = a.createdAt?.toMillis?.() ?? 0;
+        const tb = b.createdAt?.toMillis?.() ?? 0;
+        return ta - tb;
+      });
+      setInteressados(unica);
+    });
+    return () => unsubInteressados();
+  }, [activity.id]);
 
   async function handleParticipar() {
     setSending(true);
     try {
       const novoStatus = estaLotado ? 'espera' : 'pendente';
-      await addDoc(collection(db, 'participations'), {
-        activityId: activity.id,
-        activityTitle: activity.title,
-        activityDate: activity.date,
-        activityDateTime: activity.dateTime || null,
-        activityLocal: activity.local,
-        activityOwnerId: activity.ownerId,
-        userId: auth.currentUser.uid,
-        userEmail: auth.currentUser.email,
-        status: novoStatus,
-        createdAt: serverTimestamp(),
-      });
-      setSent(true);
-      if (estaLotado) {
+      const meuUid = auth.currentUser.uid;
+
+      if (myParticipationId) {
+        await updateDoc(doc(db, 'participations', myParticipationId), {
+          status: novoStatus,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        const jaExisteQuery = query(
+          collection(db, 'participations'),
+          where('activityId', '==', activity.id),
+          where('userId', '==', meuUid)
+        );
+        const snap = await getDocs(jaExisteQuery);
+        if (!snap.empty) {
+          const docExistente = snap.docs[0];
+          await updateDoc(doc(db, 'participations', docExistente.id), {
+            status: novoStatus,
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          await addDoc(collection(db, 'participations'), {
+            activityId: activity.id,
+            activityTitle: activity.title,
+            activityDate: activity.date,
+            activityDateTime: activity.dateTime || null,
+            activityLocal: activity.local,
+            activityOwnerId: activity.ownerId,
+            userId: meuUid,
+            userEmail: auth.currentUser.email,
+            status: novoStatus,
+            createdAt: serverTimestamp(),
+          });
+        }
+      }
+      if (estaLotado && !myParticipationId) {
         Alert.alert('Inscrito na lista de espera!', 'As vagas estão esgotadas, mas você está na fila. Se alguém sair, você é o próximo a ser chamado.');
       }
     } catch (e) {
@@ -91,6 +153,32 @@ export default function ActivityDetailScreen({ navigation, route }) {
     } finally {
       setSending(false);
     }
+  }
+
+  async function handleCancelarInscricao() {
+    const statusLabel = meuStatus ? labelStatus(meuStatus).toLowerCase() : 'interesse';
+    Alert.alert(
+      'Cancelar inscrição?',
+      `Tem certeza que deseja cancelar sua ${statusLabel} nesta atividade? Você pode se inscrever novamente depois, se ainda houver vagas.`,
+      [
+        { text: 'Não', style: 'cancel' },
+        {
+          text: 'Sim, cancelar',
+          style: 'destructive',
+          onPress: async () => {
+            if (!myParticipationId) return;
+            setCanceling(true);
+            try {
+              await deleteDoc(doc(db, 'participations', myParticipationId));
+            } catch (e) {
+              Alert.alert('Ops', 'Não foi possível cancelar agora. Tente novamente.');
+            } finally {
+              setCanceling(false);
+            }
+          },
+        },
+      ]
+    );
   }
 
   async function promoverProximoDaFila(participationIdsAtualizados) {
@@ -339,28 +427,88 @@ export default function ActivityDetailScreen({ navigation, route }) {
 
       {!mine && (
         <View style={styles.fixedFooter}>
-          <Button
-            label={
-              checking
-                ? 'Verificando...'
-                : sent
-                ? estaLotado && interessados.find((p) => p.userId === auth.currentUser?.uid)?.status === 'espera'
-                  ? '✓ Na lista de espera'
-                  : '✓ Interesse enviado'
-                : sending
-                ? 'Enviando...'
-                : estaLotado
-                ? 'Entrar na lista de espera'
-                : 'Quero participar'
-            }
-            variant={estaLotado && !sent ? 'outline' : 'accent'}
-            onPress={handleParticipar}
-            disabled={sent || sending || checking}
-            style={{ marginBottom: spacing.sm + 2 }}
-          />
+          {meuStatus !== null && (
+            <View style={styles.userStatusCard}>
+              <View style={[styles.userStatusChip, { backgroundColor: corStatus(meuStatus) + '18', borderColor: corStatus(meuStatus) + '40' }]}>
+                <Ionicons
+                  name={
+                    meuStatus === 'confirmado'
+                      ? 'checkmark-circle'
+                      : meuStatus === 'recusado'
+                      ? 'close-circle'
+                      : meuStatus === 'espera'
+                      ? 'ticket-outline'
+                      : 'time-outline'
+                  }
+                  size={14}
+                  color={corStatus(meuStatus)}
+                />
+                <Text style={[styles.userStatusChipText, { color: corStatus(meuStatus) }]}>
+                  {labelStatus(meuStatus)}
+                </Text>
+              </View>
+              <Text style={styles.userStatusDesc}>
+                {meuStatus === 'confirmado'
+                  ? 'Você tem vaga garantida nesta atividade!'
+                  : meuStatus === 'pendente'
+                  ? 'O organizador já recebeu seu pedido e vai responder em breve.'
+                  : meuStatus === 'recusado'
+                  ? 'Infelizmente seu interesse não foi aprovado desta vez. Você pode tentar novamente se quiser.'
+                  : meuStatus === 'espera'
+                  ? 'As vagas estão esgotadas mas você está na fila. Se alguém sair, você é o próximo a ser chamado.'
+                  : 'Status atualizado em tempo real.'}
+              </Text>
+            </View>
+          )}
+
+          {meuStatus === null && !checking && (
+            <Button
+              label={
+                sending
+                  ? 'Enviando...'
+                  : estaLotado
+                  ? 'Entrar na lista de espera'
+                  : 'Quero participar'
+              }
+              variant={estaLotado ? 'outline' : 'accent'}
+              onPress={handleParticipar}
+              disabled={sending}
+              style={{ marginBottom: spacing.sm + 2 }}
+            />
+          )}
+
+          {meuStatus !== null && meuStatus !== 'recusado' && (
+            <Button
+              label={
+                canceling
+                  ? 'Cancelando...'
+                  : meuStatus === 'espera'
+                  ? 'Sair da fila de espera'
+                  : meuStatus === 'confirmado'
+                  ? 'Cancelar inscrição'
+                  : 'Cancelar interesse'
+              }
+              variant="dangerOutline"
+              onPress={handleCancelarInscricao}
+              disabled={canceling}
+              style={{ marginBottom: spacing.sm + 2 }}
+            />
+          )}
+
+          {meuStatus === 'recusado' && !sending && (
+            <Button
+              label={sending ? 'Reenviando...' : 'Reenviar interesse'}
+              variant="outline"
+              onPress={handleParticipar}
+              disabled={sending}
+              style={{ marginBottom: spacing.sm + 2 }}
+            />
+          )}
+
           <Button
             label="Conversar com quem organizou"
             variant="outline"
+            icon="chatbubble-outline"
             onPress={() => navigation.navigate('Chat', {
               withUserId: activity.ownerId,
               withUserEmail: activity.ownerEmail,
@@ -478,4 +626,38 @@ const styles = StyleSheet.create({
   iconBtnX: { width: 30, height: 30, borderRadius: radius.sm, backgroundColor: colors.disabled, alignItems: 'center', justifyContent: 'center' },
   chatBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
   fixedFooter: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderLight, backgroundColor: colors.background },
+  userStatusCard: {
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.xl,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    shadowColor: colors.black,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  userStatusChip: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 4,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    marginBottom: spacing.sm,
+  },
+  userStatusChipText: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    letterSpacing: 0.2,
+  },
+  userStatusDesc: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    lineHeight: 18,
+  },
 });
