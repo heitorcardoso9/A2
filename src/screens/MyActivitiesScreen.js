@@ -34,14 +34,22 @@ export default function MyActivitiesScreen({ navigation }) {
       const itens = snapshot.docs.map((d) => {
         const data = d.data();
         const pid = d.id;
-        if (!data.activityDateTime) {
+        if (!data.activityDateTime || !data.coverUrl) {
           (async () => {
             try {
               const actSnap = await getDoc(doc(db, 'activities', data.activityId));
               if (actSnap.exists()) {
                 const actData = actSnap.data();
-                if (actData.dateTime) {
-                  await updateDoc(doc(db, 'participations', pid), { activityDateTime: actData.dateTime });
+                const atualizacoes = {};
+                if (actData.dateTime && !data.activityDateTime) {
+                  atualizacoes.activityDateTime = actData.dateTime;
+                }
+                if (!data.coverUrl) {
+                  const foto = (actData.photoUrls && actData.photoUrls[0]) || actData.coverUrl || null;
+                  if (foto) atualizacoes.coverUrl = typeof foto === 'string' ? foto : foto.url;
+                }
+                if (Object.keys(atualizacoes).length > 0) {
+                  await updateDoc(doc(db, 'participations', pid), atualizacoes);
                 }
               }
             } catch (_) {}
@@ -58,6 +66,7 @@ export default function MyActivitiesScreen({ navigation }) {
             activityDateTime: data.activityDateTime || null,
             local: data.activityLocal || '',
             ownerId: data.activityOwnerId,
+            coverUrl: data.coverUrl || null,
           },
           _createdAt: data.createdAt || 0,
         };
@@ -378,11 +387,15 @@ function renderSectionHeader(titulo, quantidade, discreto = false) {
 
 function ParticipationCard({ item, onPress, actionButtonRight, opacidade = 1 }) {
   const hasAction = typeof actionButtonRight === 'function';
+  const preview = item?.activityPreview || {};
+  const coverUrl = preview?.coverUrl
+    || (preview?.photoUrls && (typeof preview.photoUrls[0] === 'string' ? preview.photoUrls[0] : preview.photoUrls[0]?.url))
+    || null;
   return (
     <TouchableOpacity style={[styles.card, { opacity: opacidade }]} activeOpacity={0.75} onPress={onPress}>
       <View style={styles.cardThumbWrap}>
-        {item.activityPreview?.coverUrl ? (
-          <RNExpoImage source={{ uri: item.activityPreview.coverUrl }} style={styles.cardThumb} contentFit="cover" />
+        {coverUrl ? (
+          <RNExpoImage source={{ uri: coverUrl }} style={styles.cardThumb} contentFit="cover" />
         ) : (
           <View style={[styles.cardThumb, styles.cardThumbFallback]}>
             <Ionicons name="image-outline" size={22} color={colors.textFaint} />

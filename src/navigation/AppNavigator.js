@@ -23,7 +23,7 @@ const TAB_ICONS = {
   Feed: 'home',
   Chats: 'chatbubble-ellipses',
   Criar: 'add-circle',
-  Minhas: 'calendar-outline',
+  Minhas: 'heart',
   Perfil: 'person',
 };
 

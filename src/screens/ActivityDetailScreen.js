@@ -131,6 +131,10 @@ export default function ActivityDetailScreen({ navigation, route }) {
             updatedAt: serverTimestamp(),
           });
         } else {
+          const primeiraFoto = (activity.photoUrls && activity.photoUrls[0]) || activity.coverUrl || null;
+          const coverUrlStr = primeiraFoto
+            ? (typeof primeiraFoto === 'string' ? primeiraFoto : primeiraFoto.url)
+            : null;
           await addDoc(collection(db, 'participations'), {
             activityId: activity.id,
             activityTitle: activity.title,
@@ -138,6 +142,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
             activityDateTime: activity.dateTime || null,
             activityLocal: activity.local,
             activityOwnerId: activity.ownerId,
+            coverUrl: coverUrlStr,
             userId: meuUid,
             userEmail: auth.currentUser.email,
             status: novoStatus,
