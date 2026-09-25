@@ -35,11 +35,23 @@ const TIPO_SUGESTOES = {
 const MAX_FOTOS_ATIVIDADE = 5;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
-function horarioPadrao() {
-  const novo = new Date();
-  novo.setHours(12, 0, 0, 0);
-  return novo;
-}
+const HORARIOS_POPULARES = [
+  { hora: 8, minuto: 0, label: '08:00', tag: 'Manhã' },
+  { hora: 9, minuto: 0, label: '09:00', tag: 'Manhã' },
+  { hora: 10, minuto: 0, label: '10:00', tag: 'Manhã' },
+  { hora: 11, minuto: 0, label: '11:00', tag: 'Manhã' },
+  { hora: 12, minuto: 0, label: '12:00', tag: 'Almoço' },
+  { hora: 13, minuto: 0, label: '13:00', tag: 'Almoço' },
+  { hora: 14, minuto: 0, label: '14:00', tag: 'Tarde' },
+  { hora: 15, minuto: 0, label: '15:00', tag: 'Tarde' },
+  { hora: 16, minuto: 0, label: '16:00', tag: 'Tarde' },
+  { hora: 17, minuto: 0, label: '17:00', tag: 'Tarde' },
+  { hora: 18, minuto: 0, label: '18:00', tag: 'Noite' },
+  { hora: 19, minuto: 0, label: '19:00', tag: 'Noite' },
+  { hora: 20, minuto: 0, label: '20:00', tag: 'Noite' },
+  { hora: 21, minuto: 0, label: '21:00', tag: 'Noite' },
+  { hora: 22, minuto: 0, label: '22:00', tag: 'Noite' },
+];
 
 export default function CreateActivityScreen({ navigation, route }) {
   const activityParam = route.params?.activity || null;
@@ -48,7 +60,8 @@ export default function CreateActivityScreen({ navigation, route }) {
   const [tipo, setTipo] = useState(isEditing ? (activityParam.type || TIPOS[0]) : null);
   const [titulo, setTitulo] = useState('');
   const [desc, setDesc] = useState('');
-  const [dataHora, setDataHora] = useState(horarioPadrao);
+  const [dataSelecionada, setDataSelecionada] = useState(isEditing ? null : null);
+  const [horaSelecionada, setHoraSelecionada] = useState(isEditing ? null : null);
   const [vagas, setVagas] = useState('0');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
@@ -75,7 +88,8 @@ export default function CreateActivityScreen({ navigation, route }) {
       setVagas(activityParam.maxParticipants != null ? String(activityParam.maxParticipants) : '0');
       if (activityParam.dateTime) {
         const d = activityParam.dateTime.toDate ? activityParam.dateTime.toDate() : new Date(activityParam.dateTime);
-        setDataHora(d);
+        setDataSelecionada(new Date(d.getFullYear(), d.getMonth(), d.getDate()));
+        setHoraSelecionada({ hora: d.getHours(), minuto: d.getMinutes(), label: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) });
       }
       if (activityParam.uf) {
         setUf(activityParam.uf);
@@ -105,6 +119,17 @@ export default function CreateActivityScreen({ navigation, route }) {
     setCidade('');
   }
 
+  const dataHora = useMemo(() => {
+    if (!dataSelecionada && !horaSelecionada) return null;
+    const d = dataSelecionada ? new Date(dataSelecionada) : new Date();
+    if (horaSelecionada) {
+      d.setHours(horaSelecionada.hora, horaSelecionada.minuto, 0, 0);
+    } else {
+      d.setHours(0, 0, 0, 0);
+    }
+    return d;
+  }, [dataSelecionada, horaSelecionada]);
+
   function formatarData(d) {
     const texto = d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: 'short' });
     return texto.charAt(0).toUpperCase() + texto.slice(1);
@@ -121,9 +146,7 @@ export default function CreateActivityScreen({ navigation, route }) {
       setShowDatePicker(false);
     }
     if (!selected) return;
-    const nova = new Date(dataHora);
-    nova.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
-    setDataHora(nova);
+    setDataSelecionada(new Date(selected.getFullYear(), selected.getMonth(), selected.getDate()));
   }
 
   function onDismissDate() {
@@ -137,9 +160,11 @@ export default function CreateActivityScreen({ navigation, route }) {
       setShowTimePicker(false);
     }
     if (!selected) return;
-    const nova = new Date(dataHora);
-    nova.setHours(selected.getHours(), selected.getMinutes());
-    setDataHora(nova);
+    setHoraSelecionada({
+      hora: selected.getHours(),
+      minuto: selected.getMinutes(),
+      label: selected.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+    });
   }
 
   function onDismissTime() {
@@ -150,10 +175,13 @@ export default function CreateActivityScreen({ navigation, route }) {
     setTipo(null);
     setTitulo('');
     setDesc('');
-    setDataHora(horarioPadrao());
+    setDataSelecionada(null);
+    setHoraSelecionada(null);
     setUf('');
     setCidade('');
     setVagas('0');
+    setPhotos([]);
+    setPhotosOriginais([]);
   }
 
   function handleCancelar() {
@@ -213,6 +241,10 @@ export default function CreateActivityScreen({ navigation, route }) {
     }
     if (!uf || !cidade) {
       Alert.alert('Ops', 'Selecione o estado e a cidade.');
+      return;
+    }
+    if (!dataHora) {
+      Alert.alert('Ops', 'Selecione a data e o horário da atividade.');
       return;
     }
     if (dataHora.getTime() < Date.now()) {
@@ -350,18 +382,18 @@ export default function CreateActivityScreen({ navigation, route }) {
     const itens = [
       !!tipo,
       !!titulo.trim(),
-      !!dataHora,
-      true,
+      !!dataSelecionada,
+      !!horaSelecionada,
       !!uf,
       !!cidade,
     ];
     const base = itens.filter(Boolean).length / itens.length;
     let bonus = 0;
-    if (desc.trim()) bonus += 0.05;
-    if (photos.length > 0) bonus += 0.05;
+    if (desc.trim()) bonus += 0.03;
+    if (photos.length > 0) bonus += 0.03;
     if (Number(vagas) > 0) bonus += 0.02;
     return Math.min(1, base + bonus);
-  }, [tipo, titulo, dataHora, uf, cidade, desc, photos, vagas]);
+  }, [tipo, titulo, dataSelecionada, horaSelecionada, uf, cidade, desc, photos, vagas]);
 
   const placeholderTitulo = tipo ? TIPO_SUGESTOES[tipo] : 'Ex: Trilha na Pedra Grande';
   const textoProgresso = progresso >= 1
@@ -461,13 +493,13 @@ export default function CreateActivityScreen({ navigation, route }) {
 
             <Text style={styles.labelInline}>Data</Text>
             <TouchableOpacity style={[styles.input, styles.inputInsideCard, styles.inputRow]} onPress={() => setShowDatePicker((v) => !v)}>
-              <Text style={styles.inputText}>{formatarData(dataHora)}</Text>
+              <Text style={[styles.inputText, !dataSelecionada && styles.inputTextDim]}>{dataSelecionada ? formatarData(dataSelecionada) : 'Selecione a data'}</Text>
               <Ionicons name={showDatePicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
             </TouchableOpacity>
             {showDatePicker && (
               <View style={styles.pickerWrap}>
                 <DateTimePicker
-                  value={dataHora}
+                  value={dataSelecionada || new Date()}
                   mode="date"
                   display={Platform.OS === 'ios' ? 'inline' : 'calendar'}
                   minimumDate={new Date()}
@@ -478,22 +510,63 @@ export default function CreateActivityScreen({ navigation, route }) {
             )}
 
             <Text style={styles.labelInline}>Horário</Text>
-            <TouchableOpacity style={[styles.input, styles.inputInsideCard, styles.inputRow]} onPress={() => setShowTimePicker((v) => !v)}>
-              <Text style={styles.inputText}>{formatarHora(dataHora)}</Text>
-              <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
-            {showTimePicker && (
-              <View style={styles.pickerWrap}>
-                <DateTimePicker
-                  value={dataHora}
-                  mode="time"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  minimumDate={ehDataHoje(dataHora) ? new Date() : undefined}
-                  onValueChange={onValueChangeTime}
-                  onDismiss={onDismissTime}
-                />
-              </View>
-            )}
+            <View style={{ marginTop: spacing.sm - 4 }}>
+              {['Manhã', 'Almoço', 'Tarde', 'Noite'].map((turno) => {
+                const itensTurno = HORARIOS_POPULARES.filter((h) => h.tag === turno);
+                return (
+                  <View key={turno} style={{ marginBottom: spacing.sm }}>
+                    <Text style={styles.turnoLabel}>{turno}</Text>
+                    <View style={styles.chipRowHorarios}>
+                      {itensTurno.map((h) => {
+                        const selecionado = horaSelecionada && horaSelecionada.hora === h.hora && horaSelecionada.minuto === h.minuto;
+                        return (
+                          <TouchableOpacity
+                            key={`${h.hora}-${h.minuto}`}
+                            style={[styles.horarioChip, selecionado && styles.horarioChipActive]}
+                            onPress={() => setHoraSelecionada(h)}
+                            activeOpacity={0.7}
+                          >
+                            <Text style={[styles.horarioChipText, selecionado && styles.horarioChipTextActive]}>{h.label}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  </View>
+                );
+              })}
+              <TouchableOpacity
+                style={[styles.outroHorarioBtn, showTimePicker && styles.outroHorarioBtnActive]}
+                onPress={() => setShowTimePicker((v) => !v)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="time-outline" size={16} color={showTimePicker ? colors.primary : colors.textSecondary} />
+                <Text style={[styles.outroHorarioText, showTimePicker && { color: colors.primary, fontWeight: fontWeight.bold }]}>
+                  {horaSelecionada && !HORARIOS_POPULARES.some((h) => h.hora === horaSelecionada.hora && h.minuto === horaSelecionada.minuto)
+                    ? `Horário selecionado: ${horaSelecionada.label}`
+                    : 'Outro horário...'}
+                </Text>
+                <Ionicons name={showTimePicker ? 'chevron-up' : 'chevron-down'} size={16} color={showTimePicker ? colors.primary : colors.textSecondary} />
+              </TouchableOpacity>
+              {showTimePicker && (
+                <View style={styles.pickerWrap}>
+                  <DateTimePicker
+                    value={(() => {
+                      if (dataSelecionada && horaSelecionada) {
+                        const d = new Date(dataSelecionada);
+                        d.setHours(horaSelecionada.hora, horaSelecionada.minuto, 0, 0);
+                        return d;
+                      }
+                      if (dataSelecionada) return new Date(dataSelecionada);
+                      return new Date();
+                    })()}
+                    mode="time"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onValueChange={onValueChangeTime}
+                    onDismiss={onDismissTime}
+                  />
+                </View>
+              )}
+            </View>
 
             <Text style={styles.labelInline}>Estado</Text>
             <TouchableOpacity style={[styles.input, styles.inputInsideCard, styles.inputRow]} onPress={() => setShowEstadoModal(true)}>
@@ -741,6 +814,64 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  turnoLabel: {
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginTop: spacing.sm - 2,
+    marginBottom: 6,
+  },
+  chipRowHorarios: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: spacing.sm - 4,
+  },
+  horarioChip: {
+    paddingVertical: 8,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    minWidth: 72,
+    alignItems: 'center',
+  },
+  horarioChipActive: {
+    backgroundColor: colors.primary,
+    borderColor: colors.primary,
+  },
+  horarioChipText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.textSecondary,
+  },
+  horarioChipTextActive: {
+    color: colors.white,
+  },
+  outroHorarioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: spacing.md - 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.backgroundAlt,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    marginTop: spacing.sm,
+  },
+  outroHorarioBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: colors.primaryTint,
+  },
+  outroHorarioText: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    flex: 1,
   },
   footerSticky: {
     flexDirection: 'row',
