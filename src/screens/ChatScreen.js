@@ -1,25 +1,32 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import UserName from '../components/UserName';
 import UserAvatar from '../components/UserAvatar';
+import { Image as RNExpoImage } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
-function getChatId(uid1, uid2) {
-  return [uid1, uid2].sort().join('_');
+function getChatId(uid1, uid2, activityId) {
+  const sortedUsers = [uid1, uid2].sort();
+  if (activityId) {
+    return `activity_${activityId}_${sortedUsers[0]}_${sortedUsers[1]}`;
+  }
+  return sortedUsers.join('_');
 }
 
 export default function ChatScreen({ navigation, route }) {
-  const { withUserId, withUserEmail, activityTitle } = route.params;
+  const { withUserId, withUserEmail, activityTitle, activityPreview } = route.params;
   const insets = useSafeAreaInsets();
   const [bottomInset] = useState(insets.bottom);
   const [topInset] = useState(insets.top);
   const myUid = auth.currentUser.uid;
-  const chatId = getChatId(myUid, withUserId);
+  const chatId = getChatId(myUid, withUserId, activityPreview?.id);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
+  const [activityData, setActivityData] = useState(activityPreview || null);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -28,6 +35,20 @@ export default function ChatScreen({ navigation, route }) {
       setMessages(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return unsubscribe;
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'chats', chatId));
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.activityPreview) {
+            setActivityData((prev) => prev || data.activityPreview);
+          }
+        }
+      } catch (_) {}
+    })();
   }, []);
 
   async function handleSend() {
@@ -40,21 +61,46 @@ export default function ChatScreen({ navigation, route }) {
         senderId: myUid,
         createdAt: serverTimestamp(),
       });
-      await setDoc(
-        doc(db, 'chats', chatId),
-        {
-          participants: [myUid, withUserId],
-          participantEmails: { [myUid]: auth.currentUser.email, [withUserId]: withUserEmail },
-          activityTitle: activityTitle || null,
-          updatedAt: serverTimestamp(),
-          lastMessage: conteudo,
-        },
-        { merge: true }
-      );
+      const docPayload = {
+        participants: [myUid, withUserId],
+        participantEmails: { [myUid]: auth.currentUser.email, [withUserId]: withUserEmail },
+        activityId: activityPreview?.id || activityData?.id || null,
+        activityTitle: activityTitle || activityPreview?.title || activityData?.title || null,
+        activityPreview: activityPreview || activityData || null,
+        updatedAt: serverTimestamp(),
+        lastMessage: conteudo,
+      };
+      await setDoc(doc(db, 'chats', chatId), docPayload, { merge: true });
     } catch (e) {
       Alert.alert('Ops', 'Não foi possível enviar a mensagem. Verifique sua conexão e tente de novo.');
     }
   }
+
+  async function handleOpenActivity() {
+    const id = activityData?.id || activityPreview?.id;
+    if (!id) return;
+    try {
+      const snap = await getDoc(doc(db, 'activities', id));
+      if (snap.exists()) {
+        const full = { id: snap.id, ...snap.data() };
+        navigation.navigate('ActivityDetail', { activity: full, mine: full.ownerId === myUid });
+      } else {
+        Alert.alert('Ops', 'Essa atividade não existe mais.');
+      }
+    } catch (_) {
+      Alert.alert('Ops', 'Não foi possível carregar a atividade.');
+    }
+  }
+
+  const activityCoverUrl = useMemo(() => {
+    const a = activityData || activityPreview;
+    if (!a) return null;
+    if (a.coverUrl) return a.coverUrl;
+    if (a.photoUrls && a.photoUrls[0]) {
+      return typeof a.photoUrls[0] === 'string' ? a.photoUrls[0] : a.photoUrls[0].url;
+    }
+    return null;
+  }, [activityData, activityPreview]);
 
   return (
     <KeyboardAvoidingView
@@ -63,13 +109,54 @@ export default function ChatScreen({ navigation, route }) {
       keyboardVerticalOffset={Platform.OS === 'ios' ? bottomInset : 0}
     >
       <View style={styles.header}>
-        <TouchableOpacity style={styles.headerInfo} onPress={() => navigation.navigate('UserProfile', { userId: withUserId })}>
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.name}><UserName userId={withUserId} fallbackEmail={withUserEmail} /></Text>
-            {activityTitle ? <Text style={styles.activity}>{activityTitle}</Text> : null}
+        <TouchableOpacity
+          style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
+          onPress={handleOpenActivity}
+          disabled={!activityData && !activityPreview}
+        >
+          {activityCoverUrl ? (
+            <RNExpoImage source={{ uri: activityCoverUrl }} style={styles.activityThumb} contentFit="cover" />
+          ) : (activityData || activityPreview) ? (
+            <View style={[styles.activityThumb, styles.activityThumbFallback]}>
+              <Ionicons name="calendar-outline" size={18} color={colors.textFaint} />
+            </View>
+          ) : null}
+          <View style={{ flex: 1 }}>
+            {(activityData || activityPreview) ? (
+              <Text style={styles.activityTitle} numberOfLines={1}>
+                {activityData?.title || activityPreview?.title}
+              </Text>
+            ) : (
+              <Text style={styles.activityTitle} numberOfLines={1}>
+                <UserName userId={withUserId} fallbackEmail={withUserEmail} />
+              </Text>
+            )}
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs - 1, marginTop: 2 }}
+              onPress={() => navigation.navigate('UserProfile', { userId: withUserId })}
+            >
+              <UserAvatar userId={withUserId} fallbackEmail={withUserEmail} size={18} />
+              <Text style={styles.nameSmall}>
+                <UserName userId={withUserId} fallbackEmail={withUserEmail} />
+              </Text>
+            </TouchableOpacity>
+            {activityData?.date ? (
+              <Text style={styles.activitySmallDate}>
+                <Ionicons name="time-outline" size={12} />  {activityData.date}
+              </Text>
+            ) : null}
           </View>
-          <UserAvatar userId={withUserId} fallbackEmail={withUserEmail} size={32} />
         </TouchableOpacity>
+        {(activityData || activityPreview) ? (
+          <TouchableOpacity
+            style={styles.headerBackBtn}
+            onPress={handleOpenActivity}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            activeOpacity={0.65}
+          >
+            <Ionicons name="open-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <FlatList
@@ -111,16 +198,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     backgroundColor: colors.background,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
-  headerInfo: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  name: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
-  activity: { fontSize: fontSize.sm, color: colors.textSecondary },
+  activityThumb: { width: 44, height: 44, borderRadius: 12, backgroundColor: colors.card },
+  activityThumbFallback: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.borderLight },
+  activityTitle: { fontWeight: fontWeight.bold, fontSize: fontSize.base },
+  activitySmallDate: { fontSize: fontSize.xs, color: colors.textFaint, marginTop: 1 },
+  nameSmall: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  headerBackBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: colors.primaryTint,
+    alignItems: 'center', justifyContent: 'center',
+  },
   bubble: { maxWidth: '75%', padding: spacing.sm + 2, borderRadius: 16 },
   bubbleMine: { backgroundColor: colors.primary, alignSelf: 'flex-end', borderBottomRightRadius: 4 },
   bubbleTheirs: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderLight, alignSelf: 'flex-start', borderBottomLeftRadius: 4 },

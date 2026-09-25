@@ -419,7 +419,24 @@ export default function ActivityDetailScreen({ navigation, route }) {
                   )}
                   <TouchableOpacity
                     style={styles.chatBtn}
-                    onPress={() => navigation.navigate('Chat', { withUserId: item.userId, withUserEmail: item.userEmail, activityTitle: activity.title })}
+                    onPress={() => {
+                      const primeiraFoto = (activity.photoUrls && activity.photoUrls[0]) || activity.coverUrl || null;
+                      const coverUrlStr = primeiraFoto ? (typeof primeiraFoto === 'string' ? primeiraFoto : primeiraFoto.url) : null;
+                      navigation.navigate('Chat', {
+                        withUserId: item.userId,
+                        withUserEmail: item.userEmail,
+                        activityTitle: activity.title,
+                        activityPreview: {
+                          id: activity.id,
+                          title: activity.title,
+                          coverUrl: coverUrlStr,
+                          date: activity.date,
+                          activityDateTime: activity.dateTime || null,
+                          local: activity.local,
+                          ownerId: activity.ownerId,
+                        },
+                      });
+                    }}
                   >
                     <Ionicons name="chatbubble-outline" size={18} color={colors.primary} />
                   </TouchableOpacity>
@@ -514,11 +531,24 @@ export default function ActivityDetailScreen({ navigation, route }) {
             label="Conversar com quem organizou"
             variant="outline"
             icon="chatbubble-outline"
-            onPress={() => navigation.navigate('Chat', {
-              withUserId: activity.ownerId,
-              withUserEmail: activity.ownerEmail,
-              activityTitle: activity.title,
-            })}
+            onPress={() => {
+              const primeiraFoto = (activity.photoUrls && activity.photoUrls[0]) || activity.coverUrl || null;
+              const coverUrlStr = primeiraFoto ? (typeof primeiraFoto === 'string' ? primeiraFoto : primeiraFoto.url) : null;
+              navigation.navigate('Chat', {
+                withUserId: activity.ownerId,
+                withUserEmail: activity.ownerEmail,
+                activityTitle: activity.title,
+                activityPreview: {
+                  id: activity.id,
+                  title: activity.title,
+                  coverUrl: coverUrlStr,
+                  date: activity.date,
+                  activityDateTime: activity.dateTime || null,
+                  local: activity.local,
+                  ownerId: activity.ownerId,
+                },
+              });
+            }}
           />
         </View>
       )}
