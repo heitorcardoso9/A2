@@ -17,6 +17,14 @@ function getChatId(uid1, uid2, activityId) {
   return sortedUsers.join('_');
 }
 
+function getActivityMs(activity) {
+  if (!activity) return 0;
+  if (activity.activityDateTime) {
+    return activity.activityDateTime.toDate ? activity.activityDateTime.toDate().getTime() : new Date(activity.activityDateTime).getTime();
+  }
+  return 0;
+}
+
 export default function ChatScreen({ navigation, route }) {
   const { withUserId, withUserEmail, activityTitle, activityPreview } = route.params;
   const insets = useSafeAreaInsets();
@@ -27,6 +35,7 @@ export default function ChatScreen({ navigation, route }) {
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [activityData, setActivityData] = useState(activityPreview || null);
+  const [reviewedAlready, setReviewedAlready] = useState(false);
   const listRef = useRef(null);
 
   useEffect(() => {
@@ -47,9 +56,21 @@ export default function ChatScreen({ navigation, route }) {
             setActivityData((prev) => prev || data.activityPreview);
           }
         }
+        const act = activityData || activityPreview;
+        if (act && act.id) {
+          const ms = getActivityMs(act);
+          if (ms > 0 && ms < Date.now()) {
+            const sorted = [myUid, withUserId].sort();
+            const reviewId = `r_${act.id}_${sorted[0]}_${sorted[1]}`;
+            const snapR = await getDoc(doc(db, 'reviews', reviewId));
+            if (snapR.exists()) {
+              setReviewedAlready(true);
+            }
+          }
+        }
       } catch (_) {}
     })();
-  }, []);
+  }, [activityData, activityPreview, myUid, withUserId]);
 
   async function handleSend() {
     const conteudo = text.trim();
@@ -148,14 +169,22 @@ export default function ChatScreen({ navigation, route }) {
           </View>
         </TouchableOpacity>
         {(activityData || activityPreview) ? (
-          <TouchableOpacity
-            style={styles.headerBackBtn}
-            onPress={handleOpenActivity}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-            activeOpacity={0.65}
-          >
-            <Ionicons name="open-outline" size={18} color={colors.primary} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'column', alignItems: 'flex-end', gap: spacing.xs }}>
+            <TouchableOpacity
+              style={styles.headerBackBtn}
+              onPress={handleOpenActivity}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              activeOpacity={0.65}
+            >
+              <Ionicons name="open-outline" size={18} color={colors.primary} />
+            </TouchableOpacity>
+            {reviewedAlready ? (
+              <View style={styles.reviewedChip}>
+                <Ionicons name="checkmark" size={12} color={colors.success} />
+                <Text style={styles.reviewedChipText}>Avaliado</Text>
+              </View>
+            ) : null}
+          </View>
         ) : null}
       </View>
 
@@ -197,7 +226,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.backgroundAlt },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
@@ -215,6 +244,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryTint,
     alignItems: 'center', justifyContent: 'center',
   },
+  reviewedChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 3,
+    paddingHorizontal: 7, paddingVertical: 3,
+    backgroundColor: colors.successBg,
+    borderRadius: 999,
+  },
+  reviewedChipText: { fontSize: 10, color: colors.success, fontWeight: fontWeight.bold },
   bubble: { maxWidth: '75%', padding: spacing.sm + 2, borderRadius: 16 },
   bubbleMine: { backgroundColor: colors.primary, alignSelf: 'flex-end', borderBottomRightRadius: 4 },
   bubbleTheirs: { backgroundColor: colors.background, borderWidth: 1, borderColor: colors.borderLight, alignSelf: 'flex-start', borderBottomLeftRadius: 4 },

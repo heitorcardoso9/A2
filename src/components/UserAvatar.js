@@ -8,7 +8,8 @@ export default function UserAvatar({ userId, fallbackEmail, size = 38 }) {
   const profile = useUserProfile(userId);
   const email = profile?.email || fallbackEmail || '';
   const iniciais = email.trim().slice(0, 2).toUpperCase() || '?';
-  const photoUrl = profile?.profilePhotoUrl;
+  // Usa profilePhotoUrl (campo antigo / usado no feed) PRIMEIRO por compatibilidade
+  const photoUrl = profile?.profilePhotoUrl || profile?.avatarUrl || null;
   const dimensionStyle = { width: size, height: size, borderRadius: size / 2 };
 
   if (photoUrl) {

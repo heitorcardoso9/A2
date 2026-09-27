@@ -6,6 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { doc, onSnapshot, collection, query, where, getDoc, deleteDoc, getDocs, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
+import RatingModal from '../components/RatingModal';
+import UserAvatar from '../components/UserAvatar';
+import UserName from '../components/UserName';
 
 export default function MyActivitiesScreen({ navigation }) {
   const myUid = auth.currentUser?.uid;
@@ -13,6 +16,10 @@ export default function MyActivitiesScreen({ navigation }) {
   const [minhasAtividades, setMinhasAtividades] = useState([]);
   const [participacoes, setParticipacoes] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [userReviewsDone, setUserReviewsDone] = useState(new Map());
+  const [participantesPorAtividade, setParticipantesPorAtividade] = useState(new Map());
+  const [ratingVisible, setRatingVisible] = useState(false);
+  const [reviewTarget, setReviewTarget] = useState(null);
 
   useEffect(() => {
     if (!myUid) return;
@@ -66,6 +73,8 @@ export default function MyActivitiesScreen({ navigation }) {
             activityDateTime: data.activityDateTime || null,
             local: data.activityLocal || '',
             ownerId: data.activityOwnerId,
+            ownerName: data.activityOwnerName || null,
+            ownerEmail: data.activityOwnerEmail || null,
             coverUrl: data.coverUrl || null,
           },
           _createdAt: data.createdAt || 0,
@@ -78,11 +87,113 @@ export default function MyActivitiesScreen({ navigation }) {
       });
       setParticipacoes(itens);
     });
+
+    const qReviews = query(
+      collection(db, 'reviews'),
+      where('reviewerId', '==', myUid)
+    );
+    const unsubReviews = onSnapshot(qReviews, (snap) => {
+      const map = new Map();
+      for (const d of snap.docs) {
+        const rev = d.data();
+        if (rev.activityId && rev.reviewedId) {
+          const key = `${rev.activityId}:${rev.reviewedId}`;
+          map.set(key, rev);
+        }
+      }
+      setUserReviewsDone(map);
+    });
+
     return () => {
       unsubActivities();
       unsubscribe();
+      unsubReviews();
     };
   }, [myUid]);
+
+  useEffect(() => {
+    if (!myUid || minhasAtividades.length === 0) return;
+    const passadas = minhasAtividades.filter((a) => !isFutureActivity(a));
+    if (passadas.length === 0) return;
+    const activityIds = passadas.map((a) => a.id);
+    const q = query(collection(db, 'participations'), where('activityId', 'in', activityIds), where('status', 'in', ['confirmado', 'espera']));
+    const unsub = onSnapshot(q, async (snap) => {
+      const participationsByAct = {};
+      for (const docSnap of snap.docs) {
+        const d = docSnap.data();
+        if (!participationsByAct[d.activityId]) participationsByAct[d.activityId] = [];
+        participationsByAct[d.activityId].push({
+          id: docSnap.id,
+          userId: d.userId,
+          userEmail: d.userEmail || null,
+          userName: d.userName || null,
+          userAvatar: d.userAvatar || null,
+          status: d.status,
+        });
+      }
+      for (const actId of Object.keys(participationsByAct)) {
+        const users = participationsByAct[actId];
+        const finalUsers = [];
+        for (const u of users) {
+          if (!u.userName || !u.userAvatar) {
+            try {
+              const us = await getDoc(doc(db, 'users', u.userId));
+              if (us.exists()) {
+                const ud = us.data();
+                u.userName = ud.name || 'Usuário';
+                u.userAvatar = ud.avatarUrl || null;
+              }
+            } catch {}
+          }
+          finalUsers.push(u);
+        }
+        participationsByAct[actId] = finalUsers;
+      }
+      setParticipantesPorAtividade(new Map(Object.entries(participationsByAct)));
+    });
+    return () => unsub();
+  }, [myUid, minhasAtividades]);
+
+  function getReviewStatus(activityId, reviewedId) {
+    const key = `${activityId}:${reviewedId}`;
+    return userReviewsDone.has(key) ? userReviewsDone.get(key) : null;
+  }
+
+  function abrirAvaliacaoOrganizador(participation) {
+    if (!participation?.activityPreview?.ownerId || !myUid || myUid === participation.activityPreview.ownerId) return;
+    const existing = getReviewStatus(participation.activityId, participation.activityPreview.ownerId);
+    setReviewTarget({
+      reviewedUserId: participation.activityPreview.ownerId,
+      reviewedUserEmail: participation.activityPreview.ownerEmail,
+      reviewedUserName: null,
+      reviewedUserAvatar: null,
+      activityPreview: participation.activityPreview,
+      existingInitial: existing,
+    });
+    setRatingVisible(true);
+  }
+
+  function abrirAvaliacaoParticipante(activity, participant) {
+    if (!participant?.userId || !myUid || myUid === participant.userId) return;
+    const existing = getReviewStatus(activity.id, participant.userId);
+    const coverUrl = activity?.photoUrls?.[0] || activity?.coverUrl || null;
+    setReviewTarget({
+      reviewedUserId: participant.userId,
+      reviewedUserEmail: participant.userEmail,
+      reviewedUserName: null,
+      reviewedUserAvatar: null,
+      activityPreview: {
+        id: activity.id,
+        title: activity.title,
+        date: activity.date,
+        activityDateTime: activity.dateTime || null,
+        local: activity.local,
+        coverUrl,
+      },
+      existingInitial: existing,
+    });
+    setRatingVisible(true);
+  }
 
   async function refreshAll() {
     setRefreshing(true);
@@ -188,9 +299,41 @@ export default function MyActivitiesScreen({ navigation }) {
   }
 
   if (tab === 'participar') {
-    return <TabParticiparContent participacoes={participacoes} refreshing={refreshing} onRefresh={refreshAll} renderTabBar={renderTabBar} activityCache={activityCache} myUid={myUid} abrirDetalhes={abrirDetalhes} confirmarCancelarParticipacao={confirmarCancelarParticipacao} />;
+    return (
+      <>
+        <TabParticiparContent participacoes={participacoes} refreshing={refreshing} onRefresh={refreshAll} renderTabBar={renderTabBar} activityCache={activityCache} myUid={myUid} abrirDetalhes={abrirDetalhes} confirmarCancelarParticipacao={confirmarCancelarParticipacao} getReviewStatus={getReviewStatus} abrirAvaliacaoOrganizador={abrirAvaliacaoOrganizador} />
+        <RatingModal
+          key={'p-' + (reviewTarget?.reviewedUserId + '_' + reviewTarget?.activityPreview?.id)}
+          visible={ratingVisible && !!reviewTarget}
+          onClose={() => { setRatingVisible(false); setReviewTarget(null); }}
+          reviewedUserId={reviewTarget?.reviewedUserId}
+          reviewedUserEmail={reviewTarget?.reviewedUserEmail}
+          reviewedUserName={reviewTarget?.reviewedUserName}
+          reviewedUserAvatar={reviewTarget?.reviewedUserAvatar}
+          activityPreview={reviewTarget?.activityPreview}
+          existingInitial={reviewTarget?.existingInitial}
+          onSubmitted={() => { setRatingVisible(false); setReviewTarget(null); }}
+        />
+      </>
+    );
   }
-  return <TabMinhasContent minhasAtividades={minhasAtividades} refreshing={refreshing} onRefresh={refreshAll} renderTabBar={renderTabBar} navigation={navigation} abrirDetalhes={abrirDetalhes} confirmarExclusao={confirmarExclusao} />;
+  return (
+    <>
+      <TabMinhasContent minhasAtividades={minhasAtividades} refreshing={refreshing} onRefresh={refreshAll} renderTabBar={renderTabBar} navigation={navigation} abrirDetalhes={abrirDetalhes} confirmarExclusao={confirmarExclusao} participantesPorAtividade={participantesPorAtividade} getReviewStatus={getReviewStatus} abrirAvaliacaoParticipante={abrirAvaliacaoParticipante} />
+      <RatingModal
+        key={'m-' + (reviewTarget?.reviewedUserId + '_' + reviewTarget?.activityPreview?.id)}
+        visible={ratingVisible && !!reviewTarget}
+        onClose={() => { setRatingVisible(false); setReviewTarget(null); }}
+        reviewedUserId={reviewTarget?.reviewedUserId}
+        reviewedUserEmail={reviewTarget?.reviewedUserEmail}
+        reviewedUserName={reviewTarget?.reviewedUserName}
+        reviewedUserAvatar={reviewTarget?.reviewedUserAvatar}
+        activityPreview={reviewTarget?.activityPreview}
+        existingInitial={reviewTarget?.existingInitial}
+        onSubmitted={() => { setRatingVisible(false); setReviewTarget(null); }}
+      />
+    </>
+  );
 }
 
 function compareActivityDate(a, b, asc = false) {
@@ -272,7 +415,7 @@ function labelStatus(status) {
 
 const STATUS_STYLE_KEY = { pendente: 'statusPendente', confirmado: 'statusConfirmado', recusado: 'statusRecusado', espera: 'statusEspera' };
 
-function TabParticiparContent({ participacoes, refreshing, onRefresh, renderTabBar, abrirDetalhes, confirmarCancelarParticipacao }) {
+function TabParticiparContent({ participacoes, refreshing, onRefresh, renderTabBar, abrirDetalhes, confirmarCancelarParticipacao, getReviewStatus, abrirAvaliacaoOrganizador }) {
   const { futuras, passadas, enriched } = useMemo(() => {
     const list = participacoes.slice();
     list.sort((a, b) => {
@@ -311,13 +454,36 @@ function TabParticiparContent({ participacoes, refreshing, onRefresh, renderTabB
           )} />)
         )}
         {passadas.length > 0 && renderSectionHeader('Passadas', passadas.length, true)}
-        {passadas.length > 0 && passadas.map((p) => <ParticipationCard key={p.id} item={p} onPress={() => abrirDetalhes(p.activityPreview)} opacidade={0.88} />)}
+        {passadas.length > 0 && passadas.map((p) => {
+          const ownerId = p.activityPreview.ownerId;
+          const review = ownerId ? getReviewStatus(p.activityId, ownerId) : null;
+          return (
+            <View key={p.id} style={{ marginBottom: spacing.md }}>
+              <ParticipationCard item={p} onPress={() => abrirDetalhes(p.activityPreview)} opacidade={0.92} />
+              {ownerId ? (
+                <View style={styles.reviewRow}>
+                  {review ? (
+                  <View style={[styles.reviewChip, styles.reviewChipDone]}>
+                    <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                    <Text style={[styles.reviewChipText, styles.reviewChipTextDone]}>Você avaliou · ⭐ {review.rating}</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={[styles.reviewChip, styles.reviewChipPending]} activeOpacity={0.7} onPress={() => abrirAvaliacaoOrganizador(p)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <Ionicons name="star" size={15} color={colors.accent || '#DD6433'} />
+                    <Text style={[styles.reviewChipText, styles.reviewChipTextPending]} numberOfLines={1}>Avaliar organizador</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : null}
+          </View>
+        );
+      })}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-function TabMinhasContent({ minhasAtividades, refreshing, onRefresh, renderTabBar, navigation, abrirDetalhes, confirmarExclusao }) {
+function TabMinhasContent({ minhasAtividades, refreshing, onRefresh, renderTabBar, navigation, abrirDetalhes, confirmarExclusao, participantesPorAtividade, getReviewStatus, abrirAvaliacaoParticipante }) {
   const { futuras, passadas } = useMemo(() => {
     const list = minhasAtividades.slice();
     list.sort(compareActivityDate);
@@ -364,7 +530,53 @@ function TabMinhasContent({ minhasAtividades, refreshing, onRefresh, renderTabBa
           )} />)
         )}
         {passadas.length > 0 && renderSectionHeader('Passadas', passadas.length, true)}
-        {passadas.length > 0 && passadas.map((a) => <MineActivityCard key={a.id} activity={a} onPress={() => abrirDetalhes(a, true)} opacidade={0.88} />)}
+        {passadas.length > 0 && passadas.map((a) => {
+          const participantes = participantesPorAtividade.get(a.id) || [];
+          const paraAvaliar = participantes.filter((p) => p.userId !== auth.currentUser?.uid);
+          return (
+            <View key={a.id} style={{ marginBottom: spacing.md }}>
+              <MineActivityCard activity={a} onPress={() => abrirDetalhes(a, true)} opacidade={0.92} />
+              {paraAvaliar.length > 0 ? (
+                <View style={{ marginLeft: 104, gap: spacing.sm - 2, marginTop: -spacing.sm }}>
+                  {paraAvaliar.map((p) => {
+                    const review = getReviewStatus(a.id, p.userId);
+                    return review ? (
+                      <View key={p.userId + '-' + a.id} style={[styles.reviewChip, styles.reviewChipDone]}>
+                        <UserAvatar userId={p.userId} fallbackEmail={p.userEmail} size={22} />
+                        <UserName
+                          userId={p.userId}
+                          fallbackEmail={p.userEmail}
+                          style={[styles.reviewChipText, styles.reviewChipTextDone, { flex: 0 }]}
+                          numberOfLines={1}
+                        />
+                        <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                        <Text style={[styles.reviewChipText, styles.reviewChipTextDone]}>⭐ {review.rating}</Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        key={p.userId + '-' + a.id}
+                        style={[styles.reviewChip, styles.reviewChipPending]}
+                        activeOpacity={0.75}
+                        onPress={() => abrirAvaliacaoParticipante(a, p)}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <UserAvatar userId={p.userId} fallbackEmail={p.userEmail} size={22} />
+                        <Text style={[styles.reviewChipText, styles.reviewChipTextPending]} numberOfLines={1}>Avaliar</Text>
+                        <UserName
+                          userId={p.userId}
+                          fallbackEmail={p.userEmail}
+                          style={[styles.reviewChipText, styles.reviewChipTextPending]}
+                          numberOfLines={1}
+                        />
+                        <Ionicons name="star" size={15} color={colors.accent || '#DD6433'} />
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              ) : null}
+            </View>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
@@ -692,5 +904,35 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     textAlign: 'center',
     lineHeight: 20,
+  },
+  reviewRow: {
+    marginTop: -spacing.sm,
+    marginLeft: 104,
+    marginBottom: 2,
+  },
+  reviewChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 7,
+    paddingHorizontal: spacing.md - 1,
+    borderRadius: radius.pill,
+    alignSelf: 'flex-start',
+  },
+  reviewChipPending: {
+    backgroundColor: colors.warningBg || '#FEF3C7',
+  },
+  reviewChipDone: {
+    backgroundColor: colors.successBg || '#E1F0E6',
+  },
+  reviewChipText: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
+  reviewChipTextPending: {
+    color: colors.warning || '#8A5A12',
+  },
+  reviewChipTextDone: {
+    color: colors.success || '#1F6B43',
   },
 });
