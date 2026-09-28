@@ -28,7 +28,14 @@ export default function MyActivitiesScreen({ navigation }) {
       where('ownerId', '==', myUid)
     );
     const unsubActivities = onSnapshot(qActivities, (snapshot) => {
-      const itens = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const dedup = new Map();
+      for (const d of snapshot.docs) {
+        dedup.set(d.id, { id: d.id, ...d.data() });
+      }
+      // Dedup extra por activityId (garantia total)
+      const dedupAct = new Map();
+      for (const item of dedup.values()) dedupAct.set(item.id, item);
+      const itens = Array.from(dedupAct.values());
       itens.sort((a, b) => compareActivityDate(a, b));
       setMinhasAtividades(itens);
     });
@@ -37,8 +44,10 @@ export default function MyActivitiesScreen({ navigation }) {
       collection(db, 'participations'),
       where('userId', '==', myUid)
     );
+    const STATUS_PRIORITY = { confirmado: 4, espera: 3, pendente: 2, recusado: 1 };
     const unsubscribe = onSnapshot(qPart, (snapshot) => {
-      const itens = snapshot.docs.map((d) => {
+      const dedupByDocId = new Map();
+      for (const d of snapshot.docs) {
         const data = d.data();
         const pid = d.id;
         if (!data.activityDateTime || !data.coverUrl) {
@@ -62,7 +71,7 @@ export default function MyActivitiesScreen({ navigation }) {
             } catch (_) {}
           })();
         }
-        return {
+        dedupByDocId.set(pid, {
           id: pid,
           status: data.status,
           activityId: data.activityId,
@@ -78,8 +87,23 @@ export default function MyActivitiesScreen({ navigation }) {
             coverUrl: data.coverUrl || null,
           },
           _createdAt: data.createdAt || 0,
-        };
-      });
+        });
+      }
+      // DEDUP FORTE POR ACTIVITYID: se mesma atividade aparecer com docs diferentes (pid distinto),
+      // mantém apenas 1 — com melhor status (confirmado > espera > pendente > recusado)
+      const byActivity = new Map();
+      for (const p of dedupByDocId.values()) {
+        const key = p.activityId;
+        const existing = byActivity.get(key);
+        if (!existing) {
+          byActivity.set(key, p);
+        } else {
+          const p1 = STATUS_PRIORITY[existing.status] || 0;
+          const p2 = STATUS_PRIORITY[p.status] || 0;
+          if (p2 > p1) byActivity.set(key, p);
+        }
+      }
+      const itens = Array.from(byActivity.values());
       itens.sort((a, b) => {
         const ta = (a._createdAt && a._createdAt.toDate ? a._createdAt.toDate().getTime() : a._createdAt) || 0;
         const tb = (b._createdAt && b._createdAt.toDate ? b._createdAt.toDate().getTime() : b._createdAt) || 0;
@@ -114,40 +138,45 @@ export default function MyActivitiesScreen({ navigation }) {
   useEffect(() => {
     if (!myUid || minhasAtividades.length === 0) return;
     const passadas = minhasAtividades.filter((a) => !isFutureActivity(a));
-    if (passadas.length === 0) return;
+    if (passadas.length === 0) {
+      setParticipantesPorAtividade(new Map());
+      return;
+    }
     const activityIds = passadas.map((a) => a.id);
-    const q = query(collection(db, 'participations'), where('activityId', 'in', activityIds), where('status', 'in', ['confirmado', 'espera']));
+    // SÓ status confirmado — lista de espera, pendentes, recusados não podem ser avaliados
+    const q = query(collection(db, 'participations'), where('activityId', 'in', activityIds), where('status', '==', 'confirmado'));
     const unsub = onSnapshot(q, async (snap) => {
       const participationsByAct = {};
       for (const docSnap of snap.docs) {
         const d = docSnap.data();
-        if (!participationsByAct[d.activityId]) participationsByAct[d.activityId] = [];
-        participationsByAct[d.activityId].push({
-          id: docSnap.id,
-          userId: d.userId,
-          userEmail: d.userEmail || null,
-          userName: d.userName || null,
-          userAvatar: d.userAvatar || null,
-          status: d.status,
-        });
+        if (!participationsByAct[d.activityId]) participationsByAct[d.activityId] = new Map();
+        if (!participationsByAct[d.activityId].has(d.userId)) {
+          participationsByAct[d.activityId].set(d.userId, {
+            id: docSnap.id,
+            userId: d.userId,
+            userEmail: d.userEmail || null,
+            userName: d.userName || null,
+            userAvatar: d.userAvatar || null,
+            status: d.status,
+          });
+        }
       }
       for (const actId of Object.keys(participationsByAct)) {
-        const users = participationsByAct[actId];
-        const finalUsers = [];
+        const usersMap = participationsByAct[actId];
+        const users = Array.from(usersMap.values());
         for (const u of users) {
           if (!u.userName || !u.userAvatar) {
             try {
               const us = await getDoc(doc(db, 'users', u.userId));
               if (us.exists()) {
                 const ud = us.data();
-                u.userName = ud.name || 'Usuário';
-                u.userAvatar = ud.avatarUrl || null;
+                u.userName = u.userName || ud.username || ud.name || 'Usuário';
+                u.userAvatar = u.userAvatar || ud.profilePhotoUrl || ud.avatarUrl || null;
               }
             } catch {}
           }
-          finalUsers.push(u);
         }
-        participationsByAct[actId] = finalUsers;
+        participationsByAct[actId] = users;
       }
       setParticipantesPorAtividade(new Map(Object.entries(participationsByAct)));
     });
@@ -161,6 +190,8 @@ export default function MyActivitiesScreen({ navigation }) {
 
   function abrirAvaliacaoOrganizador(participation) {
     if (!participation?.activityPreview?.ownerId || !myUid || myUid === participation.activityPreview.ownerId) return;
+    // Só posso avaliar organizador se MINHA participação foi CONFIRMADA (não fui só pra lista de espera/pendente)
+    if (participation.status !== 'confirmado') return;
     const existing = getReviewStatus(participation.activityId, participation.activityPreview.ownerId);
     setReviewTarget({
       reviewedUserId: participation.activityPreview.ownerId,
@@ -457,10 +488,12 @@ function TabParticiparContent({ participacoes, refreshing, onRefresh, renderTabB
         {passadas.length > 0 && passadas.map((p) => {
           const ownerId = p.activityPreview.ownerId;
           const review = ownerId ? getReviewStatus(p.activityId, ownerId) : null;
+          // SÓ mostra chip de avaliação se MINHA participação foi confirmada
+          const temAvaliacaoHabilitada = p.status === 'confirmado';
           return (
             <View key={p.id} style={{ marginBottom: spacing.md }}>
               <ParticipationCard item={p} onPress={() => abrirDetalhes(p.activityPreview)} opacidade={0.92} />
-              {ownerId ? (
+              {ownerId && temAvaliacaoHabilitada ? (
                 <View style={styles.reviewRow}>
                   {review ? (
                   <View style={[styles.reviewChip, styles.reviewChipDone]}>
@@ -532,7 +565,8 @@ function TabMinhasContent({ minhasAtividades, refreshing, onRefresh, renderTabBa
         {passadas.length > 0 && renderSectionHeader('Passadas', passadas.length, true)}
         {passadas.length > 0 && passadas.map((a) => {
           const participantes = participantesPorAtividade.get(a.id) || [];
-          const paraAvaliar = participantes.filter((p) => p.userId !== auth.currentUser?.uid);
+          // SÓ quem teve status = confirmado pode ser avaliado. Organizador não se avalia.
+          const paraAvaliar = participantes.filter((p) => p.userId !== auth.currentUser?.uid && p.status === 'confirmado');
           return (
             <View key={a.id} style={{ marginBottom: spacing.md }}>
               <MineActivityCard activity={a} onPress={() => abrirDetalhes(a, true)} opacidade={0.92} />
@@ -543,14 +577,8 @@ function TabMinhasContent({ minhasAtividades, refreshing, onRefresh, renderTabBa
                     return review ? (
                       <View key={p.userId + '-' + a.id} style={[styles.reviewChip, styles.reviewChipDone]}>
                         <UserAvatar userId={p.userId} fallbackEmail={p.userEmail} size={22} />
-                        <UserName
-                          userId={p.userId}
-                          fallbackEmail={p.userEmail}
-                          style={[styles.reviewChipText, styles.reviewChipTextDone, { flex: 0 }]}
-                          numberOfLines={1}
-                        />
                         <Ionicons name="checkmark-circle" size={15} color={colors.success} />
-                        <Text style={[styles.reviewChipText, styles.reviewChipTextDone]}>⭐ {review.rating}</Text>
+                        <Text style={[styles.reviewChipText, styles.reviewChipTextDone]}>Você avaliou · ⭐ {review.rating}</Text>
                       </View>
                     ) : (
                       <TouchableOpacity
@@ -561,14 +589,8 @@ function TabMinhasContent({ minhasAtividades, refreshing, onRefresh, renderTabBa
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                       >
                         <UserAvatar userId={p.userId} fallbackEmail={p.userEmail} size={22} />
-                        <Text style={[styles.reviewChipText, styles.reviewChipTextPending]} numberOfLines={1}>Avaliar</Text>
-                        <UserName
-                          userId={p.userId}
-                          fallbackEmail={p.userEmail}
-                          style={[styles.reviewChipText, styles.reviewChipTextPending]}
-                          numberOfLines={1}
-                        />
                         <Ionicons name="star" size={15} color={colors.accent || '#DD6433'} />
+                        <Text style={[styles.reviewChipText, styles.reviewChipTextPending]} numberOfLines={1}>Avaliar participante</Text>
                       </TouchableOpacity>
                     );
                   })}

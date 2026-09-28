@@ -32,7 +32,9 @@ service cloud.firestore {
 
     match /participations/{participationId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && isValidParticipationId(participationId, request.resource.data.activityId, request.auth.uid);
       allow update: if request.auth != null && (
         request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.activityOwnerId
@@ -72,6 +74,10 @@ service cloud.firestore {
         && newData.badges is list
         && newData.badges.size() <= 5
         && (newData.comment == null || newData.comment is string);
+    }
+
+    function isValidParticipationId(participationId, activityId, userId) {
+      return participationId == 'p_' + activityId + '_' + userId;
     }
 
     match /chats/{chatId} {

@@ -39,20 +39,14 @@ export default function useUserProfile(userId) {
       cbs = new Set();
       subscribers.set(userId, cbs);
     }
-    const mySetter = (data) => {
-      if (__DEV__) {
-        console.log('[useUserProfile] userId=', userId, 'chegou keys:', data ? Object.keys(data) : 'NULO', 'name=', data?.name, 'username=', data?.username, 'avatarUrl=', !!data?.avatarUrl, 'profilePhotoUrl=', !!data?.profilePhotoUrl);
-      }
-      setProfile(data);
-    };
-    cbs.add(mySetter);
+    cbs.add(setProfile);
 
     if (entry.data !== undefined) setProfile(entry.data);
 
     return () => {
       const callbacks = subscribers.get(userId);
       if (callbacks) {
-        callbacks.delete(mySetter);
+        callbacks.delete(setProfile);
         if (callbacks.size === 0) subscribers.delete(userId);
       }
       const e = cache.get(userId);

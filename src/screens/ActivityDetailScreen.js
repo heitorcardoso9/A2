@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Alert, Dimensions } from 'react-native';
 import { Image as RNExpoImage } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { collection, query, where, getDocs, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, onSnapshot, updateDoc, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import UserAvatar from '../components/UserAvatar';
 import UserName from '../components/UserName';
@@ -12,6 +12,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+function participationId(activityId, userId) {
+  if (!activityId || !userId) return null;
+  return `p_${activityId}_${userId}`;
+}
 
 export default function ActivityDetailScreen({ navigation, route }) {
   const { activity, mine } = route.params;
@@ -118,37 +123,25 @@ export default function ActivityDetailScreen({ navigation, route }) {
           updatedAt: serverTimestamp(),
         });
       } else {
-        const jaExisteQuery = query(
-          collection(db, 'participations'),
-          where('activityId', '==', activity.id),
-          where('userId', '==', meuUid)
-        );
-        const snap = await getDocs(jaExisteQuery);
-        if (!snap.empty) {
-          const docExistente = snap.docs[0];
-          await updateDoc(doc(db, 'participations', docExistente.id), {
-            status: novoStatus,
-            updatedAt: serverTimestamp(),
-          });
-        } else {
-          const primeiraFoto = (activity.photoUrls && activity.photoUrls[0]) || activity.coverUrl || null;
-          const coverUrlStr = primeiraFoto
-            ? (typeof primeiraFoto === 'string' ? primeiraFoto : primeiraFoto.url)
-            : null;
-          await addDoc(collection(db, 'participations'), {
-            activityId: activity.id,
-            activityTitle: activity.title,
-            activityDate: activity.date,
-            activityDateTime: activity.dateTime || null,
-            activityLocal: activity.local,
-            activityOwnerId: activity.ownerId,
-            coverUrl: coverUrlStr,
-            userId: meuUid,
-            userEmail: auth.currentUser.email,
-            status: novoStatus,
-            createdAt: serverTimestamp(),
-          });
-        }
+        const pid = participationId(activity.id, meuUid);
+        const primeiraFoto = (activity.photoUrls && activity.photoUrls[0]) || activity.coverUrl || null;
+        const coverUrlStr = primeiraFoto
+          ? (typeof primeiraFoto === 'string' ? primeiraFoto : primeiraFoto.url)
+          : null;
+        await setDoc(doc(db, 'participations', pid), {
+          activityId: activity.id,
+          activityTitle: activity.title,
+          activityDate: activity.date,
+          activityDateTime: activity.dateTime || null,
+          activityLocal: activity.local,
+          activityOwnerId: activity.ownerId,
+          coverUrl: coverUrlStr,
+          userId: meuUid,
+          userEmail: auth.currentUser.email,
+          status: novoStatus,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
       }
       if (estaLotado && !myParticipationId) {
         Alert.alert('Inscrito na lista de espera!', 'As vagas estão esgotadas, mas você está na fila. Se alguém sair, você é o próximo a ser chamado.');

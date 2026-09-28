@@ -6,39 +6,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import PhotoViewerModal from '../components/PhotoViewerModal';
+import UserReviewsModal from '../components/UserReviewsModal';
 import Button from '../components/Button';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
-
-const BADGE_META = {
-  pontual:      { label: 'Pontual',          icon: 'time-outline' },
-  comunicativo: { label: 'Comunicativo(a)', icon: 'chatbubble-outline' },
-  respeitoso:   { label: 'Respeitoso(a)',   icon: 'heart-outline' },
-  compareceu:   { label: 'Compareceu',      icon: 'checkmark-circle-outline' },
-  organizado:   { label: 'Organizado(a)',   icon: 'layers-outline' },
-};
-
-function TopBadgesList({ badgesCount = {} }) {
-  const entries = Object.entries(badgesCount)
-    .filter(([, v]) => Number(v) > 0)
-    .sort((a, b) => Number(b[1]) - Number(a[1]))
-    .slice(0, 3);
-  if (entries.length === 0) return null;
-  return (
-    <View style={{ flexDirection: 'row', gap: spacing.sm - 2, marginTop: spacing.sm, flexWrap: 'wrap', justifyContent: 'center' }}>
-      {entries.map(([key, count]) => {
-        const meta = BADGE_META[key];
-        if (!meta) return null;
-        return (
-          <View key={key} style={styles.topBadge}>
-            <Ionicons name={meta.icon} size={13} color={colors.primary} />
-            <Text style={styles.topBadgeLabel}>{meta.label}</Text>
-            <Text style={styles.topBadgeCount}>{Number(count)}</Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
 
 export default function UserProfileScreen({ navigation, route }) {
   const { userId } = route.params;
@@ -46,6 +16,7 @@ export default function UserProfileScreen({ navigation, route }) {
   const [loading, setLoading] = useState(true);
   const [viewerVisible, setViewerVisible] = useState(false);
   const [viewerIndex, setViewerIndex] = useState(0);
+  const [reviewsVisible, setReviewsVisible] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -109,19 +80,23 @@ export default function UserProfileScreen({ navigation, route }) {
           <Text style={styles.username}>{profile.username || (profile.email || '').split('@')[0]}</Text>
 
           {showRatingRow ? (
-            <View style={styles.ratingRow}>
+            <TouchableOpacity
+              style={styles.ratingRow}
+              activeOpacity={0.8}
+              onPress={() => setReviewsVisible(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
               <View style={styles.ratingStars}>
                 <Ionicons name="star" size={16} color="#F59E0B" />
                 <Text style={styles.ratingValue}>{Number(avgRating).toFixed(1)}</Text>
               </View>
               <View style={styles.ratingDivider} />
               <Text style={styles.ratingTotal}>{totalReviews} {totalReviews === 1 ? 'avaliação' : 'avaliações'}</Text>
-            </View>
+              <Ionicons name="chevron-forward" size={15} color={colors.textSecondary} />
+            </TouchableOpacity>
           ) : (
             <Text style={styles.ratingHint}>Sem avaliações por enquanto</Text>
           )}
-
-          <TopBadgesList badgesCount={profile._badgesCount || {}} />
 
           {profile.cidade && profile.uf && (
             <View style={[styles.locationRow, { marginTop: spacing.sm }]}>
@@ -174,6 +149,15 @@ export default function UserProfileScreen({ navigation, route }) {
         initialIndex={viewerIndex}
         onClose={() => setViewerVisible(false)}
       />
+      <UserReviewsModal
+        visible={reviewsVisible}
+        onClose={() => setReviewsVisible(false)}
+        userId={userId}
+        fallbackEmail={profile?.email}
+        avgRating={avgRating}
+        totalReviews={totalReviews}
+        badgesCount={profile?._badgesCount || {}}
+      />
     </SafeAreaView>
   );
 }
@@ -197,20 +181,6 @@ const styles = StyleSheet.create({
   ratingDivider: { width: 1, height: 14, backgroundColor: colors.borderLight },
   ratingTotal: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
   ratingHint: { fontSize: fontSize.sm, color: colors.textFaint, marginTop: spacing.xs },
-  topBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: spacing.sm - 1,
-    paddingVertical: 4,
-    backgroundColor: colors.primaryTint,
-    borderRadius: 999,
-  },
-  topBadgeLabel: { fontSize: 11, color: colors.primaryDark, fontWeight: fontWeight.bold },
-  topBadgeCount: {
-    fontSize: 10, color: colors.primary, fontWeight: fontWeight.bold,
-    backgroundColor: colors.white,
-    paddingHorizontal: 6, paddingVertical: 0, borderRadius: 999,
-    overflow: 'hidden',
-  },
   locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: spacing.sm },
   locationText: { fontSize: fontSize.sm, color: colors.textSecondary },
   avatar: { width: 100, height: 100, borderRadius: 50, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.sm },
