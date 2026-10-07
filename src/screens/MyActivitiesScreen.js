@@ -420,18 +420,22 @@ function isFutureActivity(activity) {
     if (activity?._createdAt) {
       try {
         const insc = activity._createdAt.toDate ? activity._createdAt.toDate().getTime() : new Date(activity._createdAt).getTime();
-        return insc >= now - 24 * 60 * 60 * 1000;
+        return insc >= now - 60 * 60 * 1000;
       } catch {}
     }
     if (activity?.createdAt) {
       try {
         const insc = activity.createdAt.toDate ? activity.createdAt.toDate().getTime() : new Date(activity.createdAt).getTime();
-        return insc >= now - 24 * 60 * 60 * 1000;
+        return insc >= now - 60 * 60 * 1000;
       } catch {}
     }
     return false;
   }
-  return ms >= now - 24 * 60 * 60 * 1000;
+  if (__DEV__) {
+    const diffHoras = (ms - now) / 3600000;
+    console.log(`[MyActivities] isFuture? title=${activity?.activityPreview?.title || activity?.activityPreview?.activityTitle || activity?.title || activity?.activityTitle || '-'} ms=${new Date(ms).toLocaleString()} now=${new Date(now).toLocaleString()} diffHoras=${diffHoras.toFixed(2)}h`);
+  }
+  return ms >= now - 2 * 60 * 60 * 1000;
 }
 
 function labelStatus(status) {

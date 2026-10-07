@@ -4,7 +4,7 @@ import { View, ActivityIndicator, Platform, LogBox, StatusBar } from 'react-nati
 import { NavigationContainer } from '@react-navigation/native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './src/services/firebase';
 import AppNavigator from './src/navigation/AppNavigator';
 import { colors } from './src/constants/theme';
@@ -114,6 +114,61 @@ async function cleanupDuplicateParticipations(userId) {
   }
 }
 
+let _unsubscribeMyReviews = null;
+
+function subscribeMyReviewAggregates(userId) {
+  if (!userId) return;
+  try {
+    if (_unsubscribeMyReviews) {
+      try { _unsubscribeMyReviews(); } catch (_) {}
+      _unsubscribeMyReviews = null;
+    }
+    const q = query(collection(db, 'reviews'), where('reviewedId', '==', userId));
+    let lastCount = -1;
+    _unsubscribeMyReviews = onSnapshot(q, async (snap) => {
+      try {
+        const reviews = [];
+        snap.forEach((d) => reviews.push({ id: d.id, ...d.data() }));
+        if (reviews.length === lastCount) return;
+        lastCount = reviews.length;
+        let sum = 0;
+        const badgesCount = {};
+        let withRating = 0;
+        for (const r of reviews) {
+          const rt = Number(r.rating || 0);
+          if (rt >= 1 && rt <= 5) {
+            sum += rt;
+            withRating += 1;
+          }
+          if (Array.isArray(r.badges) && r.badges.length > 0) {
+            for (const b of r.badges.slice(0, 5)) {
+              badgesCount[b] = (badgesCount[b] || 0) + 1;
+            }
+          }
+        }
+        const avg = withRating > 0 ? Math.round((sum / withRating) * 10) / 10 : 0;
+        const patch = {
+          _reviewSum: sum,
+          _reviewCount: withRating,
+          avgRating: avg,
+          _badgesCount: badgesCount,
+        };
+        if (__DEV__) {
+          console.log(`[App] 🧮 Atualizando meus aggregates review: count=${withRating} avg=${avg}`);
+        }
+        await setDoc(doc(db, 'users', userId), patch, { merge: true });
+      } catch (e) {
+        console.warn('[App] subscribeMyReviewAggregates erro interno:', e);
+      }
+    }, (e) => {
+      console.warn('[App] subscribeMyReviewAggregates listener erro:', e);
+    });
+    if (__DEV__) console.log('[App] 👂 Listener aggregates reviews ativado para uid=' + userId);
+  } catch (e) {
+    console.warn('[App] subscribeMyReviewAggregates setup erro:', e);
+  }
+}
+
 export default function App() {
   const [user, setUser] = useState(null);
   const [checking, setChecking] = useState(true);
@@ -137,6 +192,12 @@ export default function App() {
       if (currentUser) {
         migrateUserProfile(currentUser);
         cleanupDuplicateParticipations(currentUser.uid);
+        subscribeMyReviewAggregates(currentUser.uid);
+      } else {
+        if (_unsubscribeMyReviews) {
+          try { _unsubscribeMyReviews(); } catch (_) {}
+          _unsubscribeMyReviews = null;
+        }
       }
     });
     return unsubscribe;

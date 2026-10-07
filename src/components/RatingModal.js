@@ -3,7 +3,7 @@ import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView,
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, radius } from '../constants/theme';
 import { db, auth } from '../services/firebase';
-import { doc, setDoc, getDocs, collection, query, where, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import UserAvatar from './UserAvatar';
 import UserName from './UserName';
 
@@ -59,9 +59,13 @@ export default function RatingModal({
     if (!canSubmit || !reviewId || submitting) return;
     setSubmitting(true);
     try {
+      if (__DEV__) console.log('[RatingModal] L62: getDoc users (reviewed aggregates)...');
       const activitySnap = await getDoc(doc(db, 'users', reviewedUserId));
+      if (__DEV__) console.log('[RatingModal] L62 ✅ OK: getDoc users (reviewed aggregates)');
       const userData = activitySnap.exists() ? activitySnap.data() : {};
+      if (__DEV__) console.log('[RatingModal] L64: getDoc reviews (existe anterior?)...');
       const oldReviewSnap = await getDoc(doc(db, 'reviews', reviewId));
+      if (__DEV__) console.log('[RatingModal] L64 ✅ OK: getDoc reviews (existe anterior)');
       const isNew = !oldReviewSnap.exists();
       const oldReview = isNew ? null : oldReviewSnap.data();
 
@@ -76,43 +80,37 @@ export default function RatingModal({
         rating,
         badges,
         comment: comment.trim() || null,
-        createdAt: serverTimestamp(),
+        createdAt: Date.now(),
       };
-      await setDoc(doc(db, 'reviews', reviewId), payloadReview, { merge: true });
 
-      let oldSum = Number(userData._reviewSum || 0);
-      let oldCount = Number(userData._reviewCount || 0);
-      const oldBadgesCount = userData._badgesCount || {};
-      if (!isNew && oldReview) {
-        oldSum = Math.max(0, oldSum - Number(oldReview.rating || 0));
-        oldCount = Math.max(0, oldCount - 1);
+      if (__DEV__) {
+        console.log('[RatingModal] Etapa 1/2: criando doc de review', {
+          reviewId,
+          reviewerId,
+          reviewedUserId,
+          activityId,
+          isNew,
+        });
       }
-      const newSum = oldSum + rating;
-      const newCount = oldCount + 1;
-      const newBadgesCount = { ...oldBadgesCount };
-      if (!isNew && oldReview?.badges?.length) {
-        for (const b of oldReview.badges) {
-          if (newBadgesCount[b]) newBadgesCount[b] = Math.max(0, newBadgesCount[b] - 1);
-        }
+      if (isNew) {
+        await setDoc(doc(db, 'reviews', reviewId), payloadReview);
+      } else {
+        await setDoc(doc(db, 'reviews', reviewId), payloadReview, { merge: true });
       }
-      for (const b of badges) {
-        newBadgesCount[b] = (newBadgesCount[b] || 0) + 1;
+      if (__DEV__) {
+        console.log('[RatingModal] ✅ Etapa 1/2 OK: review doc criado');
       }
-      const avgRating = newCount > 0 ? Math.round((newSum / newCount) * 10) / 10 : 0;
-      await setDoc(
-        doc(db, 'users', reviewedUserId),
-        {
-          _reviewSum: newSum,
-          _reviewCount: newCount,
-          avgRating,
-          _badgesCount: newBadgesCount,
-        },
-        { merge: true }
-      );
+
+      if (__DEV__) {
+        console.log('[RatingModal] ⏳ Etapa 2 removida: aggregates serão calculados pelo listener no App.js (do usuário avaliado, update próprio sempre passa!)');
+      }
       onSubmitted && onSubmitted(payloadReview);
       onClose && onClose();
     } catch (e) {
-      console.warn('rating error', e);
+      console.warn('rating error (checar etapa acima no terminal)', e);
+      if (__DEV__) {
+        alert('Erro detalhe no terminal: ' + (e?.message || String(e)));
+      }
       Alert.alert('Ops', 'Não foi possível enviar a avaliação. Tente de novo em instantes.');
     } finally {
       setSubmitting(false);

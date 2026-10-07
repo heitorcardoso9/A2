@@ -4,15 +4,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create, update: if request.auth != null && request.auth.uid == userId;
-
-      allow update: if (
-        request.auth != null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['_reviewSum', '_reviewCount', 'avgRating', '_badgesCount'])
-        && request.auth.uid != userId
-        && request.resource.data._reviewCount is int
-        && request.resource.data._reviewCount >= (resource.data._reviewCount || 0) - 1
-        && request.resource.data._reviewCount <= (resource.data._reviewCount || 0) + 1
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && (
+        request.auth.uid == userId
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['_reviewSum', '_reviewCount', 'avgRating', '_badgesCount'])
       );
     }
 
@@ -32,9 +27,7 @@ service cloud.firestore {
 
     match /participations/{participationId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null
-        && request.resource.data.userId == request.auth.uid
-        && isValidParticipationId(participationId, request.resource.data.activityId, request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update: if request.auth != null && (
         request.auth.uid == resource.data.userId ||
         request.auth.uid == resource.data.activityOwnerId
@@ -47,37 +40,8 @@ service cloud.firestore {
 
     match /reviews/{reviewId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && isValidReviewCreate(request.resource.data, request.auth.uid);
-      allow update: if request.auth != null && resource.data.reviewerId == request.auth.uid && isValidReviewUpdate(resource.data, request.resource.data);
-      allow delete: if request.auth != null && resource.data.reviewerId == request.auth.uid;
-    }
-
-    function isValidReviewCreate(data, uid) {
-      return data.reviewerId == uid
-        && data.reviewedId is string
-        && data.activityId is string
-        && data.rating is int
-        && data.rating >= 1
-        && data.rating <= 5
-        && data.badges is list
-        && data.badges.size() <= 5
-        && (data.comment == null || data.comment is string);
-    }
-
-    function isValidReviewUpdate(oldData, newData) {
-      return newData.reviewerId == oldData.reviewerId
-        && newData.reviewedId == oldData.reviewedId
-        && newData.activityId == oldData.activityId
-        && newData.rating is int
-        && newData.rating >= 1
-        && newData.rating <= 5
-        && newData.badges is list
-        && newData.badges.size() <= 5
-        && (newData.comment == null || newData.comment is string);
-    }
-
-    function isValidParticipationId(participationId, activityId, userId) {
-      return participationId == 'p_' + activityId + '_' + userId;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && resource.data.reviewerId == request.auth.uid;
     }
 
     match /chats/{chatId} {
@@ -91,5 +55,6 @@ service cloud.firestore {
     match /interests/{interestId} {
       allow read: if request.auth != null;
     }
+
   }
 }
