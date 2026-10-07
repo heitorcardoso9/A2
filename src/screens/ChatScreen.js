@@ -60,10 +60,14 @@ export default function ChatScreen({ navigation, route }) {
         if (act && act.id) {
           const ms = getActivityMs(act);
           if (ms > 0 && ms < Date.now()) {
-            const sorted = [myUid, withUserId].sort();
-            const reviewId = `r_${act.id}_${sorted[0]}_${sorted[1]}`;
-            const snapR = await getDoc(doc(db, 'reviews', reviewId));
-            if (snapR.exists()) {
+            const reviewId = `r_${act.id}_${myUid}_${withUserId}`;
+            const legacySorted = [myUid, withUserId].sort();
+            const legacyId = `r_${act.id}_${legacySorted[0]}_${legacySorted[1]}`;
+            const [snapR, snapLegacy] = await Promise.all([
+              getDoc(doc(db, 'reviews', reviewId)),
+              getDoc(doc(db, 'reviews', legacyId)),
+            ]);
+            if (snapR.exists() || (snapLegacy.exists() && snapLegacy.data().reviewerId === myUid)) {
               setReviewedAlready(true);
             }
           }

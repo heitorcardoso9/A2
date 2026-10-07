@@ -4,7 +4,7 @@ import { View, ActivityIndicator, Platform, LogBox, StatusBar } from 'react-nati
 import { NavigationContainer } from '@react-navigation/native';
 import * as NavigationBar from 'expo-navigation-bar';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, where, getDocs, deleteDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { auth, db } from './src/services/firebase';
 import AppNavigator from './src/navigation/AppNavigator';
 import { colors } from './src/constants/theme';
@@ -124,13 +124,18 @@ function subscribeMyReviewAggregates(userId) {
       _unsubscribeMyReviews = null;
     }
     const q = query(collection(db, 'reviews'), where('reviewedId', '==', userId));
-    let lastCount = -1;
+    let lastSignature = null;
     _unsubscribeMyReviews = onSnapshot(q, async (snap) => {
       try {
         const reviews = [];
         snap.forEach((d) => reviews.push({ id: d.id, ...d.data() }));
-        if (reviews.length === lastCount) return;
-        lastCount = reviews.length;
+        // Assinatura por conteúdo: edições de nota/selos (mesma contagem) também atualizam.
+        const signature = reviews
+          .map((r) => `${r.id}:${r.rating}:${(r.badges || []).join(',')}`)
+          .sort()
+          .join('|');
+        if (signature === lastSignature) return;
+        lastSignature = signature;
         let sum = 0;
         const badgesCount = {};
         let withRating = 0;
@@ -156,7 +161,8 @@ function subscribeMyReviewAggregates(userId) {
         if (__DEV__) {
           console.log(`[App] 🧮 Atualizando meus aggregates review: count=${withRating} avg=${avg}`);
         }
-        await setDoc(doc(db, 'users', userId), patch, { merge: true });
+        // updateDoc substitui o mapa _badgesCount inteiro (setDoc+merge manteria chaves antigas).
+        await updateDoc(doc(db, 'users', userId), patch);
       } catch (e) {
         console.warn('[App] subscribeMyReviewAggregates erro interno:', e);
       }

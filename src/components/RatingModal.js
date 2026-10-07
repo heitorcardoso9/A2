@@ -45,9 +45,11 @@ export default function RatingModal({
   const activityId = activityPreview?.id;
   const reviewId = useMemo(() => {
     if (!activityId || !reviewerId || !reviewedUserId) return null;
-    const sorted = [reviewerId, reviewedUserId].sort();
-    return `r_${activityId}_${sorted[0]}_${sorted[1]}`;
-  }, [activityId, reviewerId, reviewedUserId]);
+    // ID direcional (quem avalia -> quem é avaliado). Um ID simétrico fazia a avaliação de B
+    // sobre A cair no mesmo doc de A sobre B, e a regra de update (só o reviewer original) negava.
+    // Reaproveita o ID de avaliações antigas para editar em vez de duplicar.
+    return existingInitial?.id || `r_${activityId}_${reviewerId}_${reviewedUserId}`;
+  }, [activityId, reviewerId, reviewedUserId, existingInitial]);
 
   function toggleBadge(key) {
     setBadges((prev) => prev.includes(key) ? prev.filter((b) => b !== key) : [...prev, key]);
