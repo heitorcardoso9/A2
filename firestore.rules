@@ -28,13 +28,40 @@ service cloud.firestore {
 
     match /participations/{participationId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow update: if request.auth != null && (
-        request.auth.uid == resource.data.userId ||
-        request.auth.uid == resource.data.activityOwnerId
-      );
+      // Criação: só em nome próprio, sempre como pendente/espera (nunca já confirmado),
+      // com o dono da atividade validado contra a atividade real e ID determinístico (1 por usuário/atividade).
+      allow create: if request.auth != null
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.status in ['pendente', 'espera']
+        && participationId == 'p_' + request.resource.data.activityId + '_' + request.auth.uid
+        && exists(/databases/$(database)/documents/activities/$(request.resource.data.activityId))
+        && request.resource.data.activityOwnerId ==
+           get(/databases/$(database)/documents/activities/$(request.resource.data.activityId)).data.ownerId;
+
+      // Identidade do vínculo nunca muda.
+      // Participante: só pode pedir pendente/espera (não se confirma nem se recusa).
+      // Dono da atividade: só altera status/updatedAt.
+      allow update: if request.auth != null
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.activityId == resource.data.activityId
+        && request.resource.data.activityOwnerId == resource.data.activityOwnerId
+        && (
+          (
+            request.auth.uid == resource.data.userId
+            && (
+              request.resource.data.status == resource.data.status
+              // recusado só sai desse estado pela mão do organizador
+              || (resource.data.status != 'recusado' && request.resource.data.status in ['pendente', 'espera'])
+            )
+          )
+          || (
+            request.auth.uid == resource.data.activityOwnerId
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+          )
+        );
+      // Quem foi recusado não pode apagar o registro (senão recriaria como pendente).
       allow delete: if request.auth != null && (
-        request.auth.uid == resource.data.userId ||
+        (request.auth.uid == resource.data.userId && resource.data.status != 'recusado') ||
         request.auth.uid == resource.data.activityOwnerId
       );
     }

@@ -483,9 +483,12 @@ function TabParticiparContent({ participacoes, refreshing, onRefresh, renderTabB
           <EmptyCard text="Você ainda não está inscrito em nenhuma atividade futura. Explore o Feed e confirme presença!" />
         ) : (
           futuras.map((p) => <ParticipationCard key={p.id} item={p} onPress={() => abrirDetalhes(p.activityPreview)} actionButtonRight={() => (
-            <TouchableOpacity style={[styles.actionBtn, styles.actionBtnOutline]} activeOpacity={0.7} onPress={() => confirmarCancelarParticipacao(p)}>
-              <Text style={[styles.actionBtnText, styles.actionBtnTextOutline]}>Cancelar</Text>
-            </TouchableOpacity>
+            // Recusado não pode apagar o registro (regra do Firestore), então não oferece cancelar
+            p.status === 'recusado' ? null : (
+              <TouchableOpacity style={[styles.actionBtn, styles.actionBtnOutline]} activeOpacity={0.7} onPress={() => confirmarCancelarParticipacao(p)}>
+                <Text style={[styles.actionBtnText, styles.actionBtnTextOutline]}>Cancelar</Text>
+              </TouchableOpacity>
+            )
           )} />)
         )}
         {passadas.length > 0 && renderSectionHeader('Passadas', passadas.length, true)}

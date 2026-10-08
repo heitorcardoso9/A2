@@ -468,7 +468,7 @@ export default function ActivityDetailScreen({ navigation, route }) {
                   : meuStatus === 'pendente'
                   ? 'O organizador já recebeu seu pedido e vai responder em breve.'
                   : meuStatus === 'recusado'
-                  ? 'Infelizmente seu interesse não foi aprovado desta vez. Você pode tentar novamente se quiser.'
+                  ? 'Infelizmente seu interesse não foi aprovado para esta atividade.'
                   : meuStatus === 'espera'
                   ? 'As vagas estão esgotadas mas você está na fila. Se alguém sair, você é o próximo a ser chamado.'
                   : 'Status atualizado em tempo real.'}
@@ -506,16 +506,6 @@ export default function ActivityDetailScreen({ navigation, route }) {
               variant="dangerOutline"
               onPress={handleCancelarInscricao}
               disabled={canceling}
-              style={{ marginBottom: spacing.sm + 2 }}
-            />
-          )}
-
-          {meuStatus === 'recusado' && !sending && (
-            <Button
-              label={sending ? 'Reenviando...' : 'Reenviar interesse'}
-              variant="outline"
-              onPress={handleParticipar}
-              disabled={sending}
               style={{ marginBottom: spacing.sm + 2 }}
             />
           )}
