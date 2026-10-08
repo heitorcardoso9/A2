@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, TextInput, StyleSheet, ScrollView, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, fontSize, fontWeight, radius } from '../constants/theme';
-import { db, auth } from '../services/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { auth } from '../services/firebase';
+import { buildReviewId, saveReview } from '../services/reviewsService';
 import UserAvatar from './UserAvatar';
 import UserName from './UserName';
 
@@ -43,14 +43,10 @@ export default function RatingModal({
 
   const reviewerId = auth.currentUser.uid;
   const activityId = activityPreview?.id;
-  const reviewId = useMemo(() => {
-    if (!activityId || !reviewerId || !reviewedUserId) return null;
-    // ID direcional (quem avalia -> quem é avaliado). Um ID simétrico fazia a avaliação de B
-    // sobre A cair no mesmo doc de A sobre B, e a regra de update (só o reviewer original) negava.
-    // Reaproveita o ID de avaliações antigas para editar em vez de duplicar.
-    // Prefixo rv2_ evita colidir com IDs antigos (r_), que eram simétricos.
-    return existingInitial?.id || `rv2_${activityId}_${reviewerId}_${reviewedUserId}`;
-  }, [activityId, reviewerId, reviewedUserId, existingInitial]);
+  const reviewId = useMemo(
+    () => buildReviewId({ activityId, reviewerId, reviewedId: reviewedUserId, existingId: existingInitial?.id }),
+    [activityId, reviewerId, reviewedUserId, existingInitial]
+  );
 
   function toggleBadge(key) {
     setBadges((prev) => prev.includes(key) ? prev.filter((b) => b !== key) : [...prev, key]);
@@ -62,58 +58,20 @@ export default function RatingModal({
     if (!canSubmit || !reviewId || submitting) return;
     setSubmitting(true);
     try {
-      if (__DEV__) console.log('[RatingModal] L62: getDoc users (reviewed aggregates)...');
-      const activitySnap = await getDoc(doc(db, 'users', reviewedUserId));
-      if (__DEV__) console.log('[RatingModal] L62 ✅ OK: getDoc users (reviewed aggregates)');
-      const userData = activitySnap.exists() ? activitySnap.data() : {};
-      if (__DEV__) console.log('[RatingModal] L64: getDoc reviews (existe anterior?)...');
-      const oldReviewSnap = await getDoc(doc(db, 'reviews', reviewId));
-      if (__DEV__) console.log('[RatingModal] L64 ✅ OK: getDoc reviews (existe anterior)');
-      const isNew = !oldReviewSnap.exists();
-      const oldReview = isNew ? null : oldReviewSnap.data();
-
-      const payloadReview = {
-        id: reviewId,
-        activityId,
-        activityPreview: activityPreview || null,
-        reviewerId,
-        reviewerEmail: auth.currentUser.email,
+      const payload = await saveReview({
+        reviewId,
+        activityPreview,
+        reviewer: auth.currentUser,
         reviewedId: reviewedUserId,
         reviewedEmail: reviewedUserEmail,
         rating,
         badges,
-        comment: comment.trim() || null,
-        createdAt: Date.now(),
-      };
-
-      if (__DEV__) {
-        console.log('[RatingModal] Etapa 1/2: criando doc de review', {
-          reviewId,
-          reviewerId,
-          reviewedUserId,
-          activityId,
-          isNew,
-        });
-      }
-      if (isNew) {
-        await setDoc(doc(db, 'reviews', reviewId), payloadReview);
-      } else {
-        await setDoc(doc(db, 'reviews', reviewId), payloadReview, { merge: true });
-      }
-      if (__DEV__) {
-        console.log('[RatingModal] ✅ Etapa 1/2 OK: review doc criado');
-      }
-
-      if (__DEV__) {
-        console.log('[RatingModal] ⏳ Etapa 2 removida: aggregates serão calculados pelo listener no App.js (do usuário avaliado, update próprio sempre passa!)');
-      }
-      onSubmitted && onSubmitted(payloadReview);
+        comment,
+      });
+      onSubmitted && onSubmitted(payload);
       onClose && onClose();
     } catch (e) {
-      console.warn('rating error (checar etapa acima no terminal)', e);
-      if (__DEV__) {
-        alert('Erro detalhe no terminal: ' + (e?.message || String(e)));
-      }
+      console.warn('[RatingModal] erro ao salvar avaliação', e?.code, e?.message);
       Alert.alert('Ops', 'Não foi possível enviar a avaliação. Tente de novo em instantes.');
     } finally {
       setSubmitting(false);

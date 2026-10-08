@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
+import { buildReviewId } from '../services/reviewsService';
 import { colors, spacing, radius, fontSize, fontWeight } from '../constants/theme';
 
 function getChatId(uid1, uid2, activityId) {
@@ -60,7 +61,7 @@ export default function ChatScreen({ navigation, route }) {
         if (act && act.id) {
           const ms = getActivityMs(act);
           if (ms > 0 && ms < Date.now()) {
-            const reviewId = `rv2_${act.id}_${myUid}_${withUserId}`;
+            const reviewId = buildReviewId({ activityId: act.id, reviewerId: myUid, reviewedId: withUserId });
             const legacySorted = [myUid, withUserId].sort();
             const legacyId = `r_${act.id}_${legacySorted[0]}_${legacySorted[1]}`;
             const [snapR, snapLegacy] = await Promise.all([
