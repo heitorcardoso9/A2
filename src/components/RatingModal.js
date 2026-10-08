@@ -48,7 +48,8 @@ export default function RatingModal({
     // ID direcional (quem avalia -> quem é avaliado). Um ID simétrico fazia a avaliação de B
     // sobre A cair no mesmo doc de A sobre B, e a regra de update (só o reviewer original) negava.
     // Reaproveita o ID de avaliações antigas para editar em vez de duplicar.
-    return existingInitial?.id || `r_${activityId}_${reviewerId}_${reviewedUserId}`;
+    // Prefixo rv2_ evita colidir com IDs antigos (r_), que eram simétricos.
+    return existingInitial?.id || `rv2_${activityId}_${reviewerId}_${reviewedUserId}`;
   }, [activityId, reviewerId, reviewedUserId, existingInitial]);
 
   function toggleBadge(key) {

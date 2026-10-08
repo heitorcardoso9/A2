@@ -60,7 +60,7 @@ export default function ChatScreen({ navigation, route }) {
         if (act && act.id) {
           const ms = getActivityMs(act);
           if (ms > 0 && ms < Date.now()) {
-            const reviewId = `r_${act.id}_${myUid}_${withUserId}`;
+            const reviewId = `rv2_${act.id}_${myUid}_${withUserId}`;
             const legacySorted = [myUid, withUserId].sort();
             const legacyId = `r_${act.id}_${legacySorted[0]}_${legacySorted[1]}`;
             const [snapR, snapLegacy] = await Promise.all([

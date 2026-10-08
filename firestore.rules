@@ -4,11 +4,12 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && (
-        request.auth.uid == userId
-        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['_reviewSum', '_reviewCount', 'avgRating', '_badgesCount'])
-      );
+      // Campos de reputação são gravados só pela Cloud Function (Admin SDK ignora as regras).
+      allow create: if request.auth != null && request.auth.uid == userId
+        && !request.resource.data.keys().hasAny(['_reviewSum', '_reviewCount', 'avgRating', '_badgesCount']);
+      allow update: if request.auth != null && request.auth.uid == userId
+        && !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['_reviewSum', '_reviewCount', 'avgRating', '_badgesCount']);
     }
 
     match /users/{userId}/photos/{allPaths=**} {
