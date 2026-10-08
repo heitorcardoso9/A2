@@ -85,11 +85,32 @@ service cloud.firestore {
     }
 
     match /chats/{chatId} {
-      allow read, write: if request.auth != null && request.auth.uid in resource.data.participants;
-      allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
+      // get em chat inexistente é permitido (resource == null): o app precisa saber se já existe para criá-lo.
+      allow get: if request.auth != null
+        && (resource == null || request.auth.uid in resource.data.participants);
+      allow list: if request.auth != null && request.auth.uid in resource.data.participants;
+      allow create: if request.auth != null
+        && request.auth.uid in request.resource.data.participants
+        && request.resource.data.participants.size() == 2;
+      // Participantes não mudam (comparados como conjunto, a ordem do array pode variar).
+      allow update: if request.auth != null
+        && request.auth.uid in resource.data.participants
+        && request.resource.data.participants.toSet() == resource.data.participants.toSet();
+      allow delete: if request.auth != null && request.auth.uid in resource.data.participants;
     }
     match /chats/{chatId}/messages/{messageId} {
-      allow read, write: if request.auth != null && exists(/databases/$(database)/documents/chats/$(chatId)) && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      allow read: if request.auth != null
+        && exists(/databases/$(database)/documents/chats/$(chatId))
+        && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      allow create: if request.auth != null
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.text is string
+        && request.resource.data.text.size() > 0
+        && request.resource.data.text.size() <= 2000
+        && exists(/databases/$(database)/documents/chats/$(chatId))
+        && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      allow update: if false;
+      allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
     }
 
     match /interests/{interestId} {

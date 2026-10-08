@@ -39,13 +39,28 @@ export default function ChatScreen({ navigation, route }) {
   const [reviewedAlready, setReviewedAlready] = useState(false);
   const listRef = useRef(null);
 
+  const [chatReady, setChatReady] = useState(false);
+
+  // O chat só passa a existir no primeiro envio; até lá não há mensagens para escutar
+  // (as regras exigem o doc do chat para validar os participantes).
   useEffect(() => {
+    let cancelled = false;
+    getDoc(doc(db, 'chats', chatId))
+      .then((snap) => { if (!cancelled && snap.exists()) setChatReady(true); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [chatId]);
+
+  useEffect(() => {
+    if (!chatReady) return;
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => setMessages(snapshot.docs.map((d) => ({ id: d.id, ...d.data() }))),
+      (e) => console.warn('[ChatScreen] erro ao escutar mensagens', e?.code)
+    );
     return unsubscribe;
-  }, []);
+  }, [chatId, chatReady]);
 
   useEffect(() => {
     (async () => {
@@ -82,11 +97,6 @@ export default function ChatScreen({ navigation, route }) {
     if (!conteudo) return;
     setText('');
     try {
-      await addDoc(collection(db, 'chats', chatId, 'messages'), {
-        text: conteudo,
-        senderId: myUid,
-        createdAt: serverTimestamp(),
-      });
       const docPayload = {
         participants: [myUid, withUserId],
         participantEmails: { [myUid]: auth.currentUser.email, [withUserId]: withUserEmail },
@@ -96,8 +106,16 @@ export default function ChatScreen({ navigation, route }) {
         updatedAt: serverTimestamp(),
         lastMessage: conteudo,
       };
+      // Chat primeiro (cria se não existir), depois a mensagem.
       await setDoc(doc(db, 'chats', chatId), docPayload, { merge: true });
+      setChatReady(true);
+      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+        text: conteudo,
+        senderId: myUid,
+        createdAt: serverTimestamp(),
+      });
     } catch (e) {
+      setText(conteudo);
       Alert.alert('Ops', 'Não foi possível enviar a mensagem. Verifique sua conexão e tente de novo.');
     }
   }
